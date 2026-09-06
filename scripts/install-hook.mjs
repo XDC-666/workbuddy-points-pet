@@ -70,13 +70,20 @@ function install() {
   for (const ev of EVENTS) {
     const arr = Array.isArray(cfg.hooks[ev]) ? cfg.hooks[ev] : [];
     const exists = arr.some(
-      (x) => x && typeof x.command === 'string' && x.command.includes(MARK)
+      (x) =>
+        x &&
+        Array.isArray(x.hooks) &&
+        x.hooks.some(
+          (h) => h && typeof h.command === 'string' && h.command.includes(MARK)
+        )
     );
     if (exists) {
       cfg.hooks[ev] = arr;
       continue;
     }
-    arr.push({ type: 'command', command: `"${node}" "${HOOK}" ${ev}` });
+    // 符合 CodeBuddy/WorkBuddy hooks 规范的嵌套格式：
+    // "EventName": [ { "hooks": [ { "type": "command", "command": "..." } ] } ]
+    arr.push({ hooks: [{ type: 'command', command: `"${node}" "${HOOK}" ${ev}` }] });
     cfg.hooks[ev] = arr;
     added += 1;
   }
@@ -97,9 +104,21 @@ function uninstall() {
   for (const ev of Object.keys(cfg.hooks)) {
     const arr = cfg.hooks[ev];
     if (!Array.isArray(arr)) continue;
-    const next = arr.filter(
-      (x) => !(x && typeof x.command === 'string' && x.command.includes(MARK))
-    );
+    const next = arr.filter((x) => {
+      // 旧版扁平格式：{ type, command }
+      if (x && typeof x.command === 'string' && x.command.includes(MARK)) {
+        return false;
+      }
+      // 新版嵌套格式：{ hooks: [...] }
+      if (x && Array.isArray(x.hooks)) {
+        const kept = x.hooks.filter(
+          (h) => !(h && typeof h.command === 'string' && h.command.includes(MARK))
+        );
+        x.hooks = kept;
+        return kept.length > 0;
+      }
+      return true;
+    });
     removed += arr.length - next.length;
     if (next.length) cfg.hooks[ev] = next;
     else delete cfg.hooks[ev];

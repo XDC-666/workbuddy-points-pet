@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('api', {
   saveConfig: (cfg) => ipcRenderer.invoke('save-config', cfg),
   refresh: () => ipcRenderer.invoke('refresh-now'),
   notify: (payload) => ipcRenderer.invoke('notify', payload),
+  registerHooks: () => ipcRenderer.invoke('register-hooks'),
   move: (dx, dy) => ipcRenderer.send('drag', dx, dy),
   zoom: (factor) => ipcRenderer.send('zoom', factor),
   snap: (side) => ipcRenderer.send('snap', side),

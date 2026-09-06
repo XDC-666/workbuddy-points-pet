@@ -163,6 +163,116 @@ function syncHookPrefs() {
   }
 }
 
+// ---- 把钩子脚本复制到用户数据目录，确保安装路径稳定 ----
+const HOOK_SCRIPTS_DIR = path.join(userData, 'scripts');
+const HOOKS_TO_COPY = ['status-hook.mjs', 'install-hook.mjs'];
+
+function copyHookScripts() {
+  try {
+    fs.mkdirSync(HOOK_SCRIPTS_DIR, { recursive: true });
+    for (const name of HOOKS_TO_COPY) {
+      const src = path.join(__dirname, 'scripts', name);
+      const dst = path.join(HOOK_SCRIPTS_DIR, name);
+      if (!fs.existsSync(src)) continue;
+      fs.copyFileSync(src, dst);
+    }
+  } catch (e) {
+    console.error('复制钩子脚本失败', e);
+  }
+}
+
+// 在常见位置找 node.exe，找不到就返回 ''
+function findNode() {
+  const candidates = [
+    path.join(os.homedir(), '.workbuddy', 'binaries', 'node', 'versions', '22.22.2', 'node.exe'),
+    path.join(os.homedir(), '.workbuddy', 'binaries', 'node', 'versions', '24.14.0', 'node.exe'),
+    'C:/Program Files/nodejs/node.exe',
+    'C:/Program Files (x86)/nodejs/node.exe',
+  ];
+  const fromEnv = process.env.NODE_PATH || process.env.PATH;
+  if (fromEnv) {
+    fromEnv.split(path.delimiter).forEach((p) => {
+      candidates.push(path.join(p, 'node.exe'));
+    });
+  }
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch (e) { /* ignore */ }
+  }
+  return '';
+}
+
+// 在应用内直接注册 WorkBuddy 钩子（无需命令行）
+function registerWorkBuddyHooks() {
+  try {
+    copyHookScripts();
+    const node = findNode();
+    if (!node) {
+      notifyUser('注册钩子失败', '未找到 node.exe，请安装 Node.js 或使用源码方式运行 npm run install-hook。');
+      return false;
+    }
+    const hookPath = path.join(HOOK_SCRIPTS_DIR, 'status-hook.mjs');
+    if (!fs.existsSync(hookPath)) {
+      notifyUser('注册钩子失败', '钩子脚本未找到，请重新安装桌宠。');
+      return false;
+    }
+
+    const settingsPath = path.join(os.homedir(), '.workbuddy', 'settings.json');
+    let cfg = {};
+    if (fs.existsSync(settingsPath)) {
+      try {
+        cfg = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      } catch (e) {
+        notifyUser('注册钩子失败', '解析 ~/.workbuddy/settings.json 失败，请检查格式。');
+        return false;
+      }
+      const bak = settingsPath + '.bak-' + Date.now();
+      fs.copyFileSync(settingsPath, bak);
+    }
+
+    const EVENTS = [
+      'SessionStart', 'SessionEnd', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse',
+      'Stop', 'Notification', 'PreCompact',
+    ];
+    const MARK = 'workbuddy-points-pet';
+    cfg.hooks = cfg.hooks || {};
+    let added = 0;
+    for (const ev of EVENTS) {
+      const arr = Array.isArray(cfg.hooks[ev]) ? cfg.hooks[ev] : [];
+      const exists = arr.some(
+        (x) =>
+          x && Array.isArray(x.hooks) &&
+          x.hooks.some((h) => h && typeof h.command === 'string' && h.command.includes(MARK))
+      );
+      if (exists) continue;
+      arr.push({
+        hooks: [{ type: 'command', command: `"${node}" "${hookPath}" ${ev}` }],
+      });
+      cfg.hooks[ev] = arr;
+      added += 1;
+    }
+
+    fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+    fs.writeFileSync(settingsPath, JSON.stringify(cfg, null, 2));
+    notifyUser('钩子注册成功', `已注册 ${added} 个 WorkBuddy 事件钩子。请完全退出并重新启动 WorkBuddy 后生效。`);
+    return true;
+  } catch (e) {
+    console.error('注册钩子失败', e);
+    notifyUser('注册钩子失败', e && e.message ? e.message : String(e));
+    return false;
+  }
+}
+
+function notifyUser(title, body) {
+  try {
+    if (!Notification.isSupported()) return;
+    new Notification({ title: title || 'WorkBuddy 积分桌宠', body: body || '' }).show();
+  } catch (e) {
+    console.error('通知失败', e);
+  }
+}
+
 function restartPolling() {
   if (pollTimer) clearInterval(pollTimer);
   const sec = Math.max(5, Number(config.refreshIntervalSec) || 30);
@@ -224,6 +334,7 @@ function createTray() {
       { label: '显示 / 隐藏', click: () => win && (win.isVisible() ? win.hide() : win.show()) },
       { label: '立即刷新', click: () => refreshNow() },
       { label: '喂它吃东西', click: () => win && win.webContents.send('feed') },
+      { label: '注册 WorkBuddy 钩子', click: () => registerWorkBuddyHooks() },
       { label: '设置', click: () => win && win.webContents.send('show-settings') },
       { type: 'separator' },
       { label: '退出', click: () => app.quit() },
@@ -236,6 +347,7 @@ function openMenu() {
   const menu = Menu.buildFromTemplate([
     { label: '喂它吃东西', click: () => win.webContents.send('feed') },
     { label: '立即刷新', click: () => refreshNow() },
+    { label: '注册 WorkBuddy 钩子', click: () => registerWorkBuddyHooks() },
     {
       label: config.sound === false ? '开启音效' : '关闭音效',
       click: () => saveConfig({ sound: config.sound === false }),
@@ -254,6 +366,7 @@ function main() {
   createTray();
   restartPolling();
   refreshNow();
+  copyHookScripts();
   try {
     startSpoolWatch((rec) => {
       if (win && !win.isDestroyed()) win.webContents.send('agent-event', rec);
@@ -267,6 +380,7 @@ function main() {
 ipcMain.handle('get-config', () => config);
 ipcMain.handle('save-config', (_e, cfg) => saveConfig(cfg));
 ipcMain.handle('refresh-now', () => refreshNow());
+ipcMain.handle('register-hooks', () => registerWorkBuddyHooks());
 // 渲染进程请求弹出桌面通知（任务完成提醒等）
 ipcMain.handle('notify', (_e, payload) => {
   try {

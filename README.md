@@ -109,18 +109,25 @@ npm start
 | `SessionStart` / `SessionEnd` | 回到待机 ——「开工了 / 收工，摸鱼~」 |
 | `PreCompact` | 忙碌 ——「整理上下文中...」 |
 
-**安装**
+**安装（两种方式）**
+
+方式一：直接右键桌宠托盘图标 → **「注册 WorkBuddy 钩子」**（无需命令行，v1.1.1+）
+
+方式二：源码目录运行
 
 ```bash
 npm run install-hook     # 注册钩子（会自动备份原配置）
-# 然后完全退出并重启 WorkBuddy 才会生效
 ```
+
+> **重要**：注册/修改钩子后，必须**完全退出并重启 WorkBuddy**，新配置才会生效。只刷新页面或最小化是不够的。
 
 **卸载**
 
 ```bash
 npm run uninstall-hook
 ```
+
+或右键桌宠 → **「注册 WorkBuddy 钩子」** 会先清理旧格式再重新注册。
 
 **原理**
 
