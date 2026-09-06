@@ -14,6 +14,7 @@ let config = null;
 let pollTimer = null;
 let idleTimer = null;
 let lowNotified = false;
+let lastBalance = null; // 最近一次成功拉到的余额，用于拉取失败时回退展示
 
 // 兜底图标（正常不会用到，因为 assets 下已有真实图标）
 const FALLBACK_ICON = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/8mhAAAAAElFTkSuQmCC';
@@ -100,6 +101,7 @@ async function refreshNow() {
   try {
     const r = await fetchBalance(config);
     const balance = r.balance;
+    lastBalance = balance; // 缓存成功结果
     const data = {
       balance,
       label: config.label,
@@ -116,7 +118,20 @@ async function refreshNow() {
     if (!data.low) lowNotified = false;
   } catch (e) {
     const msg = e && e.message ? e.message : String(e);
-    if (win && !win.isDestroyed()) win.webContents.send('update', { error: msg, label: config.label });
+    // 401/403 通常是登录态失效（Cookie 过期或环境变化），给出可操作的提示
+    let hint = '';
+    if (/40[13]/.test(msg)) {
+      hint = '登录态可能已失效（Cookie 过期或网络环境变化）。请在浏览器 DevTools 重新复制该请求的 Cookie 写入配置后重启桌宠。';
+    }
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('update', {
+        error: msg,
+        label: config.label,
+        lastBalance, // 回退展示上次成功余额，避免数字变红报错
+        hint,
+        time: Date.now(),
+      });
+    }
   }
 }
 

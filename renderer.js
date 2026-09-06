@@ -371,6 +371,14 @@ pet.addEventListener('contextmenu', (e) => {
 // ---- 接收余额更新 ----
 function applyData(d) {
   if (d.error) {
+    if (d.lastBalance != null) {
+      // 有历史余额：保留数字，仅给温和提示，不切报错态
+      statusEl.textContent = '· 刷新失败，显示上次数据';
+      statusEl.classList.add('warn');
+      statusEl.classList.remove('err');
+      if (d.hint) showChat(d.hint, 4200);
+      return;
+    }
     statusEl.textContent = '查询失败: ' + d.error;
     statusEl.classList.add('err');
     setState('error', 3000);
@@ -445,12 +453,14 @@ form.addEventListener('submit', (e) => {
       source: form.source.value,
       label: form.label.value,
       balance: Number(form.balance.value) || 0,
-      http: {
+      http: Object.assign({}, cur.http, {
         url: form.url.value,
-        method: 'GET',
-        headers: { Authorization: form.auth.value },
         jsonPath: form.jsonPath.value,
-      },
+        // 保留 method / body / Cookie / Referer / Origin，仅更新界面上可编辑的字段
+        headers: Object.assign({}, cur.http && cur.http.headers, {
+          Authorization: form.auth.value,
+        }),
+      }),
       refreshIntervalSec: Number(form.interval.value) || 30,
       lowBalanceThreshold: Number(form.threshold.value) || 5,
       idleFade: form.idleFade.checked,
