@@ -272,6 +272,51 @@ npm run dist
 
 `dist/` 下会生成便携版 `*.exe` 与安装版 `Setup *.exe`（图标在 `assets/icon.png`）。
 
+## 自动构建与发布（GitHub Actions）
+
+仓库已内置 `.github/workflows/release.yml`，**不需要本地打包**，云端会自动构建：
+
+- **打 tag 自动发布**（推荐）
+
+  ```bash
+  git tag v1.0.1 && git push origin v1.0.1
+  ```
+
+  GitHub 会在 Windows 云端构建安装包，并自动创建 Release 附上便携版与安装版两个 exe。
+
+- **手动构建**：仓库 → `Actions` → `Build and Release` → `Run workflow`
+  只构建不发布，产物在 Artifacts 里下载。
+
+### 安全设计
+
+自动构建最容易出事的地方，是把本地凭证一起打包发出去。因此工作流做了这些防护：
+
+| 措施 | 说明 |
+| --- | --- |
+| 最小权限 | `GITHUB_TOKEN` 仅授予 `contents: write` |
+| 锁死依赖 | 用 `npm ci` 严格按 `package-lock.json` 安装，避免依赖漂移/投毒 |
+| 不引第三方上传插件 | 只用 GitHub 官方 action 和 runner 自带的 `gh` CLI |
+| 安全闸门 | 发布前扫描：一旦发现 `config.json` 或 `session_2` / `tgw_l7_route` 等会话凭证关键字，立即中止，绝不发布 |
+| 校验未被跟踪 | 确认 `config.json` 从未被 git 跟踪 |
+| 不响应 PR | 不接受 `pull_request` 触发，避免 fork 仓库借机窃取 token |
+| 不使用缓存 | 规避缓存投毒（构建约 2 分钟，可接受） |
+
+**你的 Cookie 只在本机** `%APPDATA%\workbuddy-points-pet\config.json`：既进不了仓库（`.gitignore` 已排除），也不会被打进安装包——程序是运行时才去读它。
+
+### 发布新版本
+
+```bash
+# 1. 改 package.json 里的 version
+# 2. 提交代码
+git add -A && git commit -m "release: v1.0.1"
+git push origin master
+# 3. 打 tag，触发云端构建并自动发布
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+> 首次使用请确认仓库 `Settings → Actions → General` 允许 Actions 读写（GitHub 默认已开启）。
+
 ## 技术栈
 
 Electron（透明窗 + 原生托盘/菜单）+ 内联 SVG 角色 + 前端轮询渲染。无后端、无数据库。

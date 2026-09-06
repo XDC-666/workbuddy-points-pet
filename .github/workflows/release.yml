@@ -1,0 +1,108 @@
+# WorkBuddy 积分桌宠 —— 自动构建与发布
+#
+# 触发方式：
+#   1) 打 tag      git tag v1.0.1 && git push origin v1.0.1
+#                  → 自动构建 Windows 安装包并发布到 GitHub Release
+#   2) 手动触发    GitHub 仓库 → Actions → Build and Release → Run workflow
+#                  → 只构建，不发布，产物在 Artifacts 里下载
+#
+# 安全设计（重要）：
+#   - 只使用 GitHub 官方 action 与 runner 自带的 gh CLI，不引入任何第三方上传插件
+#   - GITHUB_TOKEN 仅授予 contents: write，遵循最小权限原则
+#   - 依赖用 npm ci 严格按 package-lock.json 安装，避免依赖漂移与投毒
+#   - 发布前设有「安全闸门」：一旦发现 config.json 或会话凭证关键字，立即中止，绝不发布
+#   - 不接受 pull_request 触发，避免 fork 仓库借机窃取 token
+#   - 不使用依赖缓存，避免缓存投毒风险（构建约 2 分钟，可接受）
+
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Windows 构建
+    runs-on: windows-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖（严格锁定版本）
+        run: npm ci
+
+      - name: 构建安装包
+        run: npm run dist
+        env:
+          # Windows 下无需代码签名，禁止自动查找证书
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: 安全闸门：确认不含任何凭证
+        shell: bash
+        run: |
+          set -e
+          echo "1) 检查仓库根目录是否存在真实配置文件 config.json ..."
+          if [ -f config.json ]; then
+            echo "::error::发现 config.json（可能含 Cookie 登录凭证），已中止发布"
+            exit 1
+          fi
+
+          echo "2) 检查是否混入任何 config.json ..."
+          found=$(find . -name "config.json" -not -path "./node_modules/*" | head -n 1)
+          if [ -n "$found" ]; then
+            echo "::error::发现 $found，已中止发布"
+            exit 1
+          fi
+
+          echo "3) 检查 config.json 是否已被 git 跟踪 ..."
+          if git ls-files --error-unmatch config.json >/dev/null 2>&1; then
+            echo "::error::config.json 已被 git 跟踪，存在泄露风险，已中止发布"
+            exit 1
+          fi
+          echo "   config.json 未被跟踪，安全"
+
+          echo "4) 检查源码是否硬编码会话凭证关键字 ..."
+          if grep -rIlE "session_2|tgw_l7_route" \
+              --include="*.js" --include="*.html" --include="*.json" \
+              . --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git; then
+            echo "::error::源码中发现疑似登录凭证关键字，已中止发布"
+            exit 1
+          fi
+          echo "   未发现凭证关键字"
+
+          echo "5) 确认构建产物 ..."
+          ls -la dist/*.exe
+          echo "安全扫描全部通过"
+
+      - name: 上传构建产物（仅手动触发时）
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorkBuddy-Points-Pet-Installers
+          path: dist/*.exe
+          if-no-files-found: error
+
+      - name: 发布到 GitHub Release（仅打 tag 时）
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="${GITHUB_REF_NAME}"
+          echo "发布 Release: $TAG"
+          gh release create "$TAG" \
+            --title "WorkBuddy 积分桌宠 $TAG" \
+            --generate-notes \
+            dist/*.exe
