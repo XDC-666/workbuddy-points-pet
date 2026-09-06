@@ -43,7 +43,10 @@ jobs:
         run: npm ci
 
       - name: 构建安装包
-        run: npm run dist
+        # 必须加 --publish never：electron-builder 检测到 tag 会自行发布，
+        # 而它自带的发布绕过了下面的安全闸门，且在没有 GH_TOKEN 时会直接失败。
+        # 禁用它，改由「发布到 GitHub Release」步骤在扫描通过后发布。
+        run: npm run dist -- --publish never
         env:
           # Windows 下无需代码签名，禁止自动查找证书
           CSC_IDENTITY_AUTO_DISCOVERY: false
