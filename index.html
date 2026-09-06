@@ -12,80 +12,299 @@
     font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
     user-select: none; -webkit-user-select: none;
   }
+
+  /* ---- 宠物整体 ---- */
   #pet {
-    position: relative; width: 180px; margin: 0 auto;
-    cursor: grab; text-align: center;
-    animation: float 3.2s ease-in-out infinite;
+    position: relative;
+    width: 220px; margin: 0 auto;
+    cursor: grab;
+    animation: hover 3.6s ease-in-out infinite;
+    transform-origin: bottom center;
   }
   #pet:active { cursor: grabbing; }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+  @keyframes hover {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    45% { transform: translateY(-10px) rotate(-1deg); }
+    55% { transform: translateY(-10px) rotate(1deg); }
+    75% { transform: translateY(0) rotate(0deg); }
   }
-  #char { transition: filter .4s; }
-  #char svg { display: block; margin: 0 auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,.25)); }
-  body.low #char { filter: grayscale(.5) brightness(.92); }
-  #tear { opacity: 0; transition: opacity .3s; }
-  body.low #tear { opacity: 1; }
+  #pet.tap { animation: tapWiggle .45s ease; }
+  @keyframes tapWiggle {
+    0%, 100% { transform: scale(1) rotate(0); }
+    25% { transform: scale(0.95) rotate(-3deg); }
+    50% { transform: scale(1.02) rotate(3deg); }
+    75% { transform: scale(0.98) rotate(-1deg); }
+  }
 
+  /* ---- 角色容器 ---- */
+  #char {
+    position: relative;
+    width: 160px; height: 150px;
+    margin: 0 auto;
+    filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+  }
+  #char svg { display: block; width: 100%; height: 100%; }
+
+  /* 眼睛发光脉冲 */
+  .eye-glow {
+    animation: eyePulse 2.4s ease-in-out infinite;
+  }
+  @keyframes eyePulse {
+    0%, 90%, 100% { opacity: .85; }
+    45% { opacity: 1; }
+  }
+
+  /* 面罩反光扫过 */
+  .visor-sheen {
+    animation: sheen 4.5s ease-in-out infinite;
+  }
+  @keyframes sheen {
+    0%, 80%, 100% { transform: translateX(-40px); opacity: 0; }
+    35% { transform: translateX(40px); opacity: .55; }
+  }
+
+  /* 低余额：整体变暗 + 角色微颤 */
+  body.low #pet { animation: hover 3.6s ease-in-out infinite, shiver 2.2s ease-in-out infinite; }
+  @keyframes shiver {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-2px); }
+    20% { transform: translateX(2px); }
+    30% { transform: translateX(-1px); }
+    40% { transform: translateX(1px); }
+    50% { transform: translateX(0); }
+  }
+  body.low #char { filter: drop-shadow(0 18px 28px rgba(0,0,0,.45)) saturate(.7) brightness(.9); }
+  body.low .eye-glow { animation: eyePulse 2.4s ease-in-out infinite, sadBlink 3s infinite; }
+  @keyframes sadBlink {
+    0%, 90%, 100% { opacity: .6; }
+    95% { opacity: .2; }
+  }
+  #tear { opacity: 0; transition: opacity .4s; }
+  body.low #tear { opacity: .85; }
+
+  /* ---- 积分气泡（玻璃拟态） ---- */
   #bubble {
-    margin-top: 4px; padding: 8px 12px; border-radius: 14px;
-    background: rgba(255,255,255,.92); color: #1f2937;
-    box-shadow: 0 6px 18px rgba(0,0,0,.25); min-width: 150px;
+    position: relative;
+    margin: -6px auto 0;
+    padding: 10px 14px;
+    width: fit-content; min-width: 150px; max-width: 220px;
+    border-radius: 16px;
+    color: #f0f4f8;
+    text-align: center;
+    background: rgba(18, 22, 34, .68);
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow:
+      0 12px 30px rgba(0,0,0,.45),
+      inset 0 1px 0 rgba(255,255,255,.08);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    transition: transform .25s, opacity .25s;
   }
-  #label { font-size: 12px; color: #6b7280; }
-  #balance {
-    font-size: 30px; font-weight: 700; color: #185FA5; line-height: 1.1;
+  #bubble::before {
+    content: '';
+    position: absolute; inset: 0; border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.03) 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
   }
-  #balance.pop { animation: pop .5s ease; }
-  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
-  #status { font-size: 11px; color: #9ca3af; min-height: 14px; }
-  #status.err { color: #d4584a; }
 
-  /* 设置面板 */
+  #label {
+    font-size: 11px;
+    letter-spacing: .5px;
+    color: rgba(200,214,235,.75);
+  }
+  #balance {
+    font-size: 32px; font-weight: 800;
+    line-height: 1.05;
+    margin: 2px 0;
+    background: linear-gradient(180deg, #fff 0%, #b8d4ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 18px rgba(79,166,255,.25);
+  }
+  #balance.pop { animation: pop .45s cubic-bezier(.2,.8,.2,1); }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+  }
+  body.low #balance {
+    background: linear-gradient(180deg, #ffd6d6 0%, #ff8a8a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 18px rgba(255,90,90,.35);
+  }
+  #status {
+    font-size: 11px;
+    color: rgba(170,190,220,.65);
+    min-height: 14px;
+  }
+  #status.err { color: #ff9b9b; }
+
+  /* 闲置半透明 */
+  body.idle #pet { opacity: .55; transition: opacity .35s; }
+  body.idle #bubble { opacity: .6; }
+  body.idle:hover #pet, body.idle:hover #bubble { opacity: 1; }
+
+  /* ---- 设置面板 ---- */
   #settings {
-    position: fixed; inset: 0; background: rgba(15,23,42,.78);
-    display: flex; align-items: center; justify-content: center; padding: 16px;
+    position: fixed; inset: 0;
+    background: rgba(8,12,22,.82);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
   }
   #settings.hidden { display: none; }
   #form {
-    width: 280px; max-height: 90%; overflow: auto;
-    background: #fff; color: #1f2937; border-radius: 14px; padding: 16px;
+    width: 300px; max-height: 92%; overflow: auto;
+    background: rgba(24,30,46,.92);
+    color: #e8eef7;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px;
+    padding: 18px;
     font-size: 13px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.55);
   }
-  #form h3 { margin: 0 0 10px; font-size: 15px; }
-  #form label { display: block; margin: 8px 0 3px; color: #4b5563; }
+  #form h3 { margin: 0 0 12px; font-size: 16px; font-weight: 700; }
+  #form label { display: block; margin: 10px 0 4px; color: #aab6cc; }
   #form input[type=text], #form input[type=number], #form select, #form textarea {
-    width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 8px;
+    width: 100%; padding: 7px 10px;
+    background: rgba(12,16,26,.7);
+    color: #e8eef7;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px;
     font-size: 13px; font-family: inherit;
+    outline: none;
   }
-  #form textarea { height: 60px; resize: vertical; }
+  #form input:focus, #form select:focus, #form textarea:focus {
+    border-color: rgba(79,166,255,.6);
+    box-shadow: 0 0 0 2px rgba(79,166,255,.15);
+  }
+  #form textarea { height: 64px; resize: vertical; }
   .row { display: flex; gap: 8px; align-items: center; }
-  .actions { display: flex; gap: 8px; margin-top: 14px; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
   .btn {
-    flex: 1; padding: 8px; border: none; border-radius: 8px; cursor: pointer;
-    font-size: 13px; font-family: inherit;
+    flex: 1; padding: 9px; border: none; border-radius: 10px;
+    cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600;
+    transition: transform .1s, opacity .15s;
   }
-  .btn.primary { background: #185FA5; color: #fff; }
-  .btn.ghost { background: #eef2f7; color: #374151; }
-  .hint { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary {
+    background: linear-gradient(135deg, #2b8cff, #185FA5);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(24,95,165,.35);
+  }
+  .btn.ghost {
+    background: rgba(255,255,255,.08);
+    color: #c8d4e8;
+  }
+  .hint { font-size: 11px; color: #74829c; margin-top: 3px; }
 </style>
 </head>
 <body>
   <div id="pet">
+    <!-- 机器人角色 -->
     <div id="char">
-      <svg viewBox="0 0 200 200" width="120" height="120">
-        <circle cx="100" cy="105" r="60" fill="#378ADD" />
-        <polygon points="48,62 34,18 90,56" fill="#F5F5FA" />
-        <polygon points="152,62 166,18 110,56" fill="#F5F5FA" />
-        <circle cx="100" cy="106" r="46" fill="#F5F5FA" />
-        <circle cx="84" cy="100" r="7" fill="#378ADD" />
-        <circle cx="116" cy="100" r="7" fill="#378ADD" />
-        <circle cx="100" cy="120" r="4.5" fill="#F2809F" />
-        <path d="M90 132 Q100 140 110 132" stroke="#378ADD" stroke-width="3" fill="none" stroke-linecap="round" />
-        <circle id="tear" cx="82" cy="120" r="5" fill="#7FBDFF" />
+      <svg viewBox="0 0 220 200" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <!-- 金属头盔渐变 -->
+          <radialGradient id="helmGrad" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="40%" stop-color="#f2f5fa" />
+            <stop offset="75%" stop-color="#d8dfe8" />
+            <stop offset="100%" stop-color="#b0bcc9" />
+          </radialGradient>
+          <linearGradient id="helmRim" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="50%" stop-color="#e3e8ef" />
+            <stop offset="100%" stop-color="#b8c3d1" />
+          </linearGradient>
+          <!-- 面罩深色反光 -->
+          <radialGradient id="visorGrad" cx="50%" cy="25%" r="80%">
+            <stop offset="0%" stop-color="#2b3a52" />
+            <stop offset="45%" stop-color="#111827" />
+            <stop offset="100%" stop-color="#05080f" />
+          </radialGradient>
+          <!-- 眼睛青光 -->
+          <linearGradient id="eyeGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8ff6ff" />
+            <stop offset="100%" stop-color="#2bd4ff" />
+          </linearGradient>
+          <filter id="eyeGlow" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="5" />
+            <feOffset dx="0" dy="6" result="offsetblur" />
+            <feComponentTransfer>
+              <feFuncA type="linear" slope=".35" />
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode in="offsetblur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <clipPath id="visorClip">
+            <ellipse cx="110" cy="88" rx="56" ry="44" />
+          </clipPath>
+        </defs>
+
+        <!-- 机身/下巴 -->
+        <path d="M70 118 Q70 162 110 168 Q150 162 150 118" fill="url(#helmGrad)" filter="url(#softShadow)" />
+        <path d="M80 122 Q80 152 110 158 Q140 152 140 122" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" />
+
+        <!-- 手臂（趴在桌边） -->
+        <ellipse cx="46" cy="138" rx="18" ry="14" fill="#d8dfe8" filter="url(#softShadow)" />
+        <ellipse cx="174" cy="138" rx="18" ry="14" fill="#d8dfe8" filter="url(#softShadow)" />
+        <ellipse cx="42" cy="142" rx="10" ry="8" fill="#b0bcc9" />
+        <ellipse cx="178" cy="142" rx="10" ry="8" fill="#b0bcc9" />
+
+        <!-- 头盔主体 -->
+        <circle cx="110" cy="88" r="74" fill="url(#helmGrad)" filter="url(#softShadow)" />
+        <circle cx="110" cy="88" r="70" fill="none" stroke="url(#helmRim)" stroke-width="4" />
+
+        <!-- 面罩 -->
+        <ellipse cx="110" cy="88" rx="60" ry="48" fill="url(#visorGrad)" stroke="#0b111c" stroke-width="3" />
+
+        <!-- 面罩反光扫过 -->
+        <g clip-path="url(#visorClip)">
+          <rect x="40" y="40" width="40" height="100" fill="url(#sheenGrad)" class="visor-sheen" opacity=".35" />
+          <linearGradient id="sheenGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="rgba(255,255,255,0)" />
+            <stop offset="50%" stop-color="rgba(255,255,255,.55)" />
+            <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+          </linearGradient>
+        </g>
+
+        <!-- 眼睛 -->
+        <g class="eye-glow" filter="url(#eyeGlow)">
+          <ellipse cx="88" cy="92" rx="14" ry="9" fill="url(#eyeGrad)" />
+          <ellipse cx="132" cy="92" rx="14" ry="9" fill="url(#eyeGrad)" />
+          <circle cx="92" cy="89" r="3" fill="#fff" opacity=".85" />
+          <circle cx="136" cy="89" r="3" fill="#fff" opacity=".85" />
+        </g>
+
+        <!-- 小嘴巴 -->
+        <path d="M104 112 Q110 117 116 112" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" />
+
+        <!-- 头顶指示灯 -->
+        <circle cx="110" cy="32" r="5" fill="#2bd4ff" filter="url(#eyeGlow)" opacity=".9">
+          <animate attributeName="opacity" values=".6;1;.6" dur="2s" repeatCount="indefinite" />
+        </circle>
+
+        <!-- 低余额眼泪 -->
+        <circle id="tear" cx="76" cy="104" r="5" fill="#7FBDFF" opacity=".85" />
       </svg>
     </div>
+
+    <!-- 积分气泡 -->
     <div id="bubble">
       <div id="label">WorkBuddy 积分</div>
       <div id="balance">--</div>
@@ -93,6 +312,7 @@
     </div>
   </div>
 
+  <!-- 设置面板 -->
   <div id="settings" class="hidden">
     <form id="form">
       <h3>桌宠设置</h3>

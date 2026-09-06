@@ -27,6 +27,10 @@ window.addEventListener('mouseup', (e) => {
   if (!dragging) return;
   dragging = false;
   if (moved < 5) {
+    pet.classList.remove('tap');
+    void pet.offsetWidth;
+    pet.classList.add('tap');
+    setTimeout(() => pet.classList.remove('tap'), 460);
     window.api.refresh();
   } else {
     const w = window.screen.availWidth;
