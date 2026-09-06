@@ -108,6 +108,7 @@ function setState(next, backMs) {
     .filter((c) => c && !c.startsWith('st-'))
     .join(' ');
   document.body.className = (keep + ' st-' + next).trim();
+  updatePaused();
   if (stateTimer) clearTimeout(stateTimer);
   stateTimer = null;
   if (backMs) stateTimer = setTimeout(goIdle, backMs);
@@ -115,6 +116,12 @@ function setState(next, backMs) {
 
 function goIdle() {
   setState(isLow ? 'low' : 'idle');
+}
+
+// 闲置/低余额时暂停持续动画，降低系统合成器负担（避免透明置顶窗口拖慢其他软件）
+function updatePaused() {
+  const paused = state === 'idle' || state === 'low';
+  document.body.classList.toggle('paused', paused);
 }
 
 // ---- 对话气泡（打字机） ----
@@ -161,23 +168,50 @@ function visibleEyes() {
   return null;
 }
 
+// ---- 鼠标穿透切换：只有悬停在宠物本体上才接收点击，其余区域透传给后面的窗口 ----
+let captureOn = false;
+let settingsOpen = false;
+function setCapture(on) {
+  if (captureOn === on) return;
+  captureOn = on;
+  if (window.api.setCapture) window.api.setCapture(on);
+}
+function isOverPet(e) {
+  const r = charEl.getBoundingClientRect();
+  if (!r.width) return false;
+  const pad = 16;
+  return (
+    e.clientX >= r.left - pad && e.clientX <= r.right + pad &&
+    e.clientY >= r.top - pad && e.clientY <= r.bottom + pad
+  );
+}
+
 window.addEventListener('mousemove', (e) => {
   const rect = charEl.getBoundingClientRect();
-  if (!rect.width) return;
-  const cx = rect.left + rect.width * (110 / 220);
-  const cy = rect.top + rect.height * (92 / 200);
-  let dx = (e.clientX - cx) / (rect.width * 0.6);
-  let dy = (e.clientY - cy) / (rect.height * 0.6);
-  dx = Math.max(-1, Math.min(1, dx));
-  dy = Math.max(-1, Math.min(1, dy));
-  gazeX = dx * 4;
-  gazeY = dy * 3;
-  applyEyeTransform();
-  markActivity(); // 鼠标在桌宠上活动 = 用户还在，重置睡眠倒计时
+  if (rect.width) {
+    const cx = rect.left + rect.width * (110 / 220);
+    const cy = rect.top + rect.height * (92 / 200);
+    let dx = (e.clientX - cx) / (rect.width * 0.6);
+    let dy = (e.clientY - cy) / (rect.height * 0.6);
+    gazeX = Math.max(-1, Math.min(1, dx)) * 4;
+    gazeY = Math.max(-1, Math.min(1, dy)) * 3;
+    applyEyeTransform();
+  }
+  // 拖拽中或设置面板打开时，保持可点击（不被穿透）
+  if (dragging || settingsOpen) { setCapture(true); return; }
+  const over = isOverPet(e);
+  if (over) markActivity(); // 悬停在宠物上 = 用户还在，重置睡眠倒计时
+  setCapture(over);
+});
+
+// 鼠标移出窗口：交还穿透，避免桌宠继续挡住后面的软件
+document.addEventListener('mouseleave', () => {
+  if (!dragging && !settingsOpen) setCapture(false);
 });
 
 function blink() {
   if (state === 'sleep') return; // 睡着了不眨眼
+  if (document.body.classList.contains('paused')) return; // 暂停态省资源，不眨眼
   const el = visibleEyes();
   if (!el) return;
   el.style.transform = 'translate(' + gazeX + 'px,' + gazeY + 'px) scaleY(.12)';
@@ -529,11 +563,16 @@ function fillForm(c) {
 }
 
 function openSettings() {
+  settingsOpen = true;
+  setCapture(true); // 设置面板需要可点击，关闭穿透
   window.api.getConfig().then(fillForm);
   settings.classList.remove('hidden');
 }
 function closeSettings() {
   settings.classList.add('hidden');
+  settingsOpen = false;
+  setCapture(false); // 交还鼠标穿透
+  markActivity();
 }
 document.getElementById('cancel').addEventListener('click', closeSettings);
 window.api.onShowSettings(openSettings);

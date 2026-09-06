@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   move: (dx, dy) => ipcRenderer.send('drag', dx, dy),
   zoom: (factor) => ipcRenderer.send('zoom', factor),
   snap: (side) => ipcRenderer.send('snap', side),
+  setCapture: (on) => ipcRenderer.send('set-capture', on),
   openMenu: () => ipcRenderer.send('open-menu'),
   onUpdate: (cb) => ipcRenderer.on('update', (_e, data) => cb(data)),
   onConfig: (cb) => ipcRenderer.on('config', (_e, cfg) => cb(cfg)),

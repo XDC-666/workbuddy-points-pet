@@ -309,6 +309,8 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'index.html'));
+  // 默认让鼠标穿透：点击透传给后面的窗口，避免桌宠遮挡/抢焦点影响其他软件
+  win.setIgnoreMouseEvents(true, { forward: true });
   win.on('closed', () => {
     win = null;
   });
@@ -410,6 +412,12 @@ ipcMain.on('snap', (_e, side) => {
   else if (side === 'right') win.setPosition(area.width - b.width, win.getBounds().y);
 });
 ipcMain.on('open-menu', () => openMenu());
+// 渲染进程请求切换鼠标穿透 / 可点击：on=true 时接收点击（戳/拖/设置），否则穿透给后面的窗口
+ipcMain.on('set-capture', (_e, on) => {
+  try {
+    if (win && !win.isDestroyed()) win.setIgnoreMouseEvents(!on, { forward: true });
+  } catch (e) { /* ignore */ }
+});
 ipcMain.on('show-settings', () => {
   if (win) win.webContents.send('show-settings');
 });

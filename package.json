@@ -1,6 +1,6 @@
 {
   "name": "workbuddy-points-pet",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "WorkBuddy 积分桌宠 —— 桌面悬浮宠物，实时显示你的 AI 助手剩余积分。数据源可配置：本地文件 / 任意 HTTP 余额接口。",
   "main": "main.js",
   "author": "雄狮泉河",

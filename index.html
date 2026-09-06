@@ -133,6 +133,12 @@
     35% { transform: translateX(40px); opacity: .55; }
   }
 
+  /* 暂停态：闲置/低余额时停掉持续动画，降低透明置顶窗口对系统合成器的负担 */
+  body.paused #pet,
+  body.paused #char,
+  body.paused .eye-glow,
+  body.paused .visor-sheen { animation-play-state: paused !important; }
+
   /* ---- 状态动画 ---- */
   /* 思考：头部微晃 + 灯快闪 */
   body.st-thinking #char { animation: tilt 1.6s ease-in-out infinite; }
