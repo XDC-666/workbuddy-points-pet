@@ -3,24 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WorkBuddy 积分桌宠 - 视觉预览</title>
+<title>WorkBuddy 积分桌宠 - 互动预览</title>
 <style>
+  * { box-sizing: border-box; }
   body {
     margin: 0; min-height: 100vh;
-    background: radial-gradient(circle at 50% 30%, #1a2030, #0b0f18);
+    background: radial-gradient(circle at 50% 28%, #1b2233, #0a0e17);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
     color: #aab6cc;
   }
   .stage {
     position: relative;
-    width: 320px; height: 360px;
-    display: flex; align-items: center; justify-content: center;
+    width: 340px; height: 400px;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 8px;
   }
   #pet {
     position: relative;
     width: 220px;
-    cursor: grab;
+    cursor: pointer;
     animation: hover 3.6s ease-in-out infinite;
     transform-origin: bottom center;
   }
@@ -30,20 +32,126 @@
     55% { transform: translateY(-10px) rotate(1deg); }
     75% { transform: translateY(0) rotate(0deg); }
   }
+  #pet.tap { animation: tapWiggle .5s ease; }
+  @keyframes tapWiggle {
+    0%, 100% { transform: scale(1) rotate(0); }
+    20% { transform: scale(1.08, .9) rotate(-4deg); }
+    45% { transform: scale(.94, 1.06) rotate(4deg); }
+    70% { transform: scale(1.03, .97) rotate(-2deg); }
+  }
+
+  /* 对话气泡 */
+  #chatBubble {
+    position: absolute;
+    left: 50%; bottom: 100%;
+    transform: translateX(-50%) translateY(-6px);
+    margin-bottom: 2px;
+    max-width: 210px;
+    padding: 8px 13px;
+    border-radius: 14px;
+    font-size: 12.5px; line-height: 1.5;
+    color: #f0f4f8;
+    text-align: center;
+    white-space: pre-wrap;
+    background: rgba(18, 22, 34, .82);
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 10px 26px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    opacity: 0; visibility: hidden;
+    transition: opacity .28s, transform .28s, visibility .28s;
+    pointer-events: none;
+    z-index: 20;
+  }
+  #chatBubble.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-12px); }
+  #chatBubble::after {
+    content: ''; position: absolute; top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(18, 22, 34, .82);
+  }
+
   #char {
     position: relative;
     width: 160px; height: 150px;
     margin: 0 auto;
     filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+    transition: filter .35s;
   }
+  #char svg { display: block; width: 100%; height: 100%; }
+
+  /* 表情切换 */
+  .eyes { display: none; transform-box: fill-box; transform-origin: center; }
+  body.st-idle #eyesNormal, body.st-low #eyesNormal { display: block; }
+  body.st-thinking #eyesThink { display: block; }
+  body.st-working #eyesWork { display: block; }
+  body.st-success #eyesHappy { display: block; }
+  body.st-error #eyesError { display: block; }
+  body.st-tap #eyesTap { display: block; }
+  #eyesNormal { transform-origin: 110px 92px; }
+
   .eye-glow { animation: eyePulse 2.4s ease-in-out infinite; }
   @keyframes eyePulse { 0%, 90%, 100% { opacity: .85; } 45% { opacity: 1; } }
   .visor-sheen { animation: sheen 4.5s ease-in-out infinite; }
-  @keyframes sheen { 0%, 80%, 100% { transform: translateX(-40px); opacity: 0; } 35% { transform: translateX(40px); opacity: .55; } }
+  @keyframes sheen {
+    0%, 80%, 100% { transform: translateX(-40px); opacity: 0; }
+    35% { transform: translateX(40px); opacity: .55; }
+  }
 
+  /* 状态动画 */
+  body.st-thinking #char { animation: tilt 1.6s ease-in-out infinite; }
+  @keyframes tilt { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+  body.st-working #char { animation: busy .55s ease-in-out infinite; }
+  @keyframes busy {
+    0%, 100% { transform: translate(0,0); }
+    25% { transform: translate(-2px,1px); }
+    50% { transform: translate(2px,-1px); }
+    75% { transform: translate(-1px,-1px); }
+  }
+  body.st-success #char { animation: bounce .7s ease; }
+  @keyframes bounce {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-18px) scale(1.05,.95); }
+    55% { transform: translateY(0) scale(.95,1.05); }
+    75% { transform: translateY(-7px) scale(1); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  body.st-error #char { animation: shake .6s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-6px); }
+    35% { transform: translateX(6px); }
+    55% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  body.st-low #pet { animation: hover 3.6s ease-in-out infinite, shiver 2.2s ease-in-out infinite; }
+  @keyframes shiver {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-2px); } 20% { transform: translateX(2px); }
+    30% { transform: translateX(-1px); } 40% { transform: translateX(1px); }
+    50% { transform: translateX(0); }
+  }
+  body.st-low #char { filter: drop-shadow(0 18px 28px rgba(0,0,0,.45)) saturate(.65) brightness(.88); }
+  #tear { opacity: 0; transition: opacity .4s; }
+  body.st-low #tear { opacity: .9; }
+
+  #topLight { fill: #2bd4ff; transition: fill .3s; }
+  body.st-thinking #topLight, body.st-working #topLight { fill: #ffb84d; }
+  body.st-success #topLight { fill: #4ade80; }
+  body.st-error #topLight { fill: #ff6b6b; }
+  body.st-low #topLight { fill: #ff9b5a; }
+  body.st-tap #topLight { fill: #b78cff; }
+
+  #mouth, #mouthHappy { transition: opacity .25s; }
+  body.st-success #mouth { opacity: 0; }
+  body.st-success #mouthHappy { opacity: 1; }
+  body.st-thinking #mouth { opacity: .45; }
+  body.st-working #mouth { opacity: .7; }
+
+  /* 积分气泡 */
   #bubble {
     position: relative;
-    margin: -6px auto 0;
+    margin: -4px auto 0;
     padding: 10px 14px;
     width: fit-content; min-width: 150px; max-width: 220px;
     border-radius: 16px;
@@ -55,12 +163,6 @@
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
   }
-  #bubble::before {
-    content: ''; position: absolute; inset: 0; border-radius: 16px; padding: 1px;
-    background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.03) 60%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
-  }
   #label { font-size: 11px; letter-spacing: .5px; color: rgba(200,214,235,.75); }
   #balance {
     font-size: 32px; font-weight: 800; line-height: 1.05; margin: 2px 0;
@@ -68,42 +170,53 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     text-shadow: 0 0 18px rgba(79,166,255,.25);
   }
+  body.st-low #balance {
+    background: linear-gradient(180deg, #ffd6d6 0%, #ff8a8a 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 18px rgba(255,90,90,.35);
+  }
   #status { font-size: 11px; color: rgba(170,190,220,.65); min-height: 14px; }
 
-  .desc {
-    max-width: 480px; text-align: center; padding: 0 20px;
-    font-size: 13px; line-height: 1.8; opacity: .85;
+  /* 演示控制 */
+  .panel {
+    max-width: 620px; text-align: center; padding: 4px 20px 28px;
+    font-size: 13px; line-height: 1.75;
   }
-  .desc h2 { color: #fff; font-size: 16px; margin: 0 0 8px; }
-  .desc ul { text-align: left; display: inline-block; margin: 8px 0; padding-left: 18px; }
-  .desc li { margin: 4px 0; }
+  .panel h2 { color: #fff; font-size: 16px; margin: 0 0 6px; font-weight: 700; }
+  .panel p { margin: 4px 0 12px; opacity: .85; }
+  .states { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 14px; }
+  .states button {
+    padding: 7px 13px; border-radius: 10px; cursor: pointer;
+    background: rgba(255,255,255,.08); color: #c8d4e8;
+    border: 1px solid rgba(255,255,255,.12);
+    font-size: 12.5px; font-family: inherit;
+    transition: background .15s, transform .1s;
+  }
+  .states button:hover { background: rgba(255,255,255,.15); }
+  .states button:active { transform: scale(.96); }
+  ul { text-align: left; display: inline-block; margin: 6px 0; padding-left: 20px; opacity: .85; }
+  li { margin: 3px 0; }
 </style>
 </head>
-<body>
+<body class="st-idle">
   <div class="stage">
     <div id="pet">
+      <div id="chatBubble"><span class="chat-text"></span></div>
       <div id="char">
-        <svg viewBox="0 0 220 200" preserveAspectRatio="xMidYMid meet" width="160" height="150">
+        <svg viewBox="0 0 220 200" preserveAspectRatio="xMidYMid meet">
           <defs>
             <radialGradient id="helmGrad" cx="35%" cy="30%" r="75%">
-              <stop offset="0%" stop-color="#ffffff" />
-              <stop offset="40%" stop-color="#f2f5fa" />
-              <stop offset="75%" stop-color="#d8dfe8" />
-              <stop offset="100%" stop-color="#b0bcc9" />
+              <stop offset="0%" stop-color="#ffffff" /><stop offset="40%" stop-color="#f2f5fa" />
+              <stop offset="75%" stop-color="#d8dfe8" /><stop offset="100%" stop-color="#b0bcc9" />
             </radialGradient>
             <linearGradient id="helmRim" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#ffffff" />
-              <stop offset="50%" stop-color="#e3e8ef" />
-              <stop offset="100%" stop-color="#b8c3d1" />
+              <stop offset="0%" stop-color="#ffffff" /><stop offset="50%" stop-color="#e3e8ef" /><stop offset="100%" stop-color="#b8c3d1" />
             </linearGradient>
             <radialGradient id="visorGrad" cx="50%" cy="25%" r="80%">
-              <stop offset="0%" stop-color="#2b3a52" />
-              <stop offset="45%" stop-color="#111827" />
-              <stop offset="100%" stop-color="#05080f" />
+              <stop offset="0%" stop-color="#2b3a52" /><stop offset="45%" stop-color="#111827" /><stop offset="100%" stop-color="#05080f" />
             </radialGradient>
             <linearGradient id="eyeGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#8ff6ff" />
-              <stop offset="100%" stop-color="#2bd4ff" />
+              <stop offset="0%" stop-color="#8ff6ff" /><stop offset="100%" stop-color="#2bd4ff" />
             </linearGradient>
             <filter id="eyeGlow" x="-80%" y="-80%" width="260%" height="260%">
               <feGaussianBlur stdDeviation="4" result="blur" />
@@ -129,39 +242,216 @@
           <g clip-path="url(#visorClip)">
             <rect x="40" y="40" width="40" height="100" fill="url(#sheenGrad)" class="visor-sheen" />
             <linearGradient id="sheenGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="rgba(255,255,255,0)" />
-              <stop offset="50%" stop-color="rgba(255,255,255,.55)" />
-              <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+              <stop offset="0%" stop-color="rgba(255,255,255,0)" /><stop offset="50%" stop-color="rgba(255,255,255,.55)" /><stop offset="100%" stop-color="rgba(255,255,255,0)" />
             </linearGradient>
           </g>
-          <g class="eye-glow" filter="url(#eyeGlow)">
+          <g id="eyesNormal" class="eyes eye-glow" filter="url(#eyeGlow)">
             <ellipse cx="88" cy="92" rx="14" ry="9" fill="url(#eyeGrad)" />
             <ellipse cx="132" cy="92" rx="14" ry="9" fill="url(#eyeGrad)" />
             <circle cx="92" cy="89" r="3" fill="#fff" opacity=".85" />
             <circle cx="136" cy="89" r="3" fill="#fff" opacity=".85" />
           </g>
-          <path d="M104 112 Q110 117 116 112" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" />
-          <circle cx="110" cy="32" r="5" fill="#2bd4ff" filter="url(#eyeGlow)" opacity=".9">
+          <g id="eyesThink" class="eyes eye-glow" filter="url(#eyeGlow)">
+            <ellipse cx="88" cy="89" rx="12" ry="5" fill="url(#eyeGrad)" />
+            <ellipse cx="132" cy="89" rx="12" ry="5" fill="url(#eyeGrad)" />
+            <path d="M74 78 L101 84" stroke="#8ff6ff" stroke-width="3" stroke-linecap="round" opacity=".75" fill="none" />
+            <path d="M146 78 L119 84" stroke="#8ff6ff" stroke-width="3" stroke-linecap="round" opacity=".75" fill="none" />
+          </g>
+          <g id="eyesWork" class="eyes eye-glow" filter="url(#eyeGlow)">
+            <ellipse cx="88" cy="94" rx="11" ry="10" fill="url(#eyeGrad)" />
+            <ellipse cx="132" cy="94" rx="11" ry="10" fill="url(#eyeGrad)" />
+            <circle cx="90" cy="91" r="2.5" fill="#fff" opacity=".9" />
+            <circle cx="134" cy="91" r="2.5" fill="#fff" opacity=".9" />
+            <path d="M76 76 L100 82" stroke="#7d90aa" stroke-width="3" stroke-linecap="round" fill="none" />
+            <path d="M144 76 L120 82" stroke="#7d90aa" stroke-width="3" stroke-linecap="round" fill="none" />
+          </g>
+          <g id="eyesHappy" class="eyes eye-glow" filter="url(#eyeGlow)">
+            <path d="M75 97 Q88 81 101 97" stroke="url(#eyeGrad)" stroke-width="7" fill="none" stroke-linecap="round" />
+            <path d="M119 97 Q132 81 145 97" stroke="url(#eyeGrad)" stroke-width="7" fill="none" stroke-linecap="round" />
+          </g>
+          <g id="eyesError" class="eyes eye-glow" filter="url(#eyeGlow)">
+            <path d="M80 87 L96 97 M96 87 L80 97" stroke="#ff7a7a" stroke-width="5" stroke-linecap="round" fill="none" />
+            <path d="M124 87 L140 97 M140 87 L124 97" stroke="#ff7a7a" stroke-width="5" stroke-linecap="round" fill="none" />
+          </g>
+          <g id="eyesTap" class="eyes eye-glow" filter="url(#eyeGlow)">
+            <circle cx="88" cy="92" r="11" fill="url(#eyeGrad)" />
+            <circle cx="132" cy="92" r="11" fill="url(#eyeGrad)" />
+            <circle cx="91" cy="88" r="3.5" fill="#fff" opacity=".9" />
+            <circle cx="135" cy="88" r="3.5" fill="#fff" opacity=".9" />
+          </g>
+          <path id="mouth" d="M104 112 Q110 117 116 112" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          <path id="mouthHappy" d="M100 110 Q110 121 120 110" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0" />
+          <circle id="topLight" cx="110" cy="32" r="5" filter="url(#eyeGlow)" opacity=".9">
             <animate attributeName="opacity" values=".6;1;.6" dur="2s" repeatCount="indefinite" />
           </circle>
+          <circle id="tear" cx="76" cy="104" r="5" fill="#7FBDFF" opacity=".85" />
         </svg>
       </div>
       <div id="bubble">
         <div id="label">WorkBuddy 积分</div>
         <div id="balance">1,280</div>
-        <div id="status">积分要省着花~</div>
+        <div id="status">陪你一起搬砖</div>
       </div>
     </div>
   </div>
 
-  <div class="desc">
-    <h2>新版 WorkBuddy 积分桌宠预览</h2>
+  <div class="panel">
+    <h2>互动预览：点点它，看它说话</h2>
+    <p>用鼠标点击桌宠会随机弹出台词气泡并做出反应；眼睛会跟着你的鼠标转，不定时眨眼。</p>
+    <div class="states">
+      <button data-state="idle">待机</button>
+      <button data-state="thinking">思考</button>
+      <button data-state="working">工作中</button>
+      <button data-state="success">完成</button>
+      <button data-state="error">出错</button>
+      <button data-state="low">低余额</button>
+      <button data-state="tap">戳一下</button>
+      <button id="autoBtn">自动演示：开</button>
+    </div>
     <ul>
-      <li>立体金属头盔 + 黑色反光面罩 + 青色发光眼</li>
-      <li>玻璃拟态积分气泡，渐变边框 + 柔和投影</li>
-      <li>悬浮呼吸、眼睛脉冲、面罩反光扫过</li>
-      <li>低余额时角色颤抖 + 流泪提示</li>
+      <li>单击 = 随机台词 + Q 弹反应；双击 = 打开设置</li>
+      <li>六种状态各有独立表情与动画（思考晃头 / 工作抖动 / 成功弹跳 / 出错摇头）</li>
+      <li>头顶指示灯随状态变色，低余额会颤抖并流泪</li>
+      <li>开启「自动模拟工作状态」后，会自己思考→工作→完成循环</li>
     </ul>
   </div>
+
+<script>
+(function () {
+  const pet = document.getElementById('pet');
+  const charEl = document.getElementById('char');
+  const chatBubble = document.getElementById('chatBubble');
+  const chatText = chatBubble.querySelector('.chat-text');
+  const statusEl = document.getElementById('status');
+
+  const TAP_LINES = ['干嘛戳我～','别闹，我干活呢','再点一次试试？','哎哟，痒！','我是有尊严的桌宠','积分要省着花哦','你又在摸鱼吧？','收到，我在听','手痒痒是吧','摸够了没？'];
+  const LINES = {
+    idle: ['摸鱼中~','发会呆...','陪你一起工作'],
+    thinking: ['思考中...','让我想想','正在分析...'],
+    working: ['正在调用工具','写代码呢，别急','搬砖中...'],
+    success: ['搞定！收工','任务完成','这波稳了'],
+    error: ['出问题了...','这次没成功'],
+    low: ['积分告急，该充能啦','余额不多了'],
+    tap: TAP_LINES,
+  };
+  const EYE_IDS = ['Normal','Think','Work','Happy','Error','Tap'];
+
+  let state = 'idle';
+  let stateTimer = null;
+  let autoOn = true;
+  let autoTimer = null;
+  const cycleTimers = [];
+  let chatHide = null;
+  let typeTimer = null;
+  let gazeX = 0, gazeY = 0;
+
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+  function setState(next, backMs){
+    state = next;
+    const keep = document.body.className.split(/\s+/).filter(c=>c && !c.startsWith('st-')).join(' ');
+    document.body.className = (keep + ' st-' + next).trim();
+    if (stateTimer) clearTimeout(stateTimer);
+    stateTimer = null;
+    if (backMs) stateTimer = setTimeout(()=>setState('idle'), backMs);
+  }
+
+  function showChat(text, ms){
+    if(!text) return;
+    clearTimeout(chatHide);
+    if(typeTimer) clearInterval(typeTimer);
+    chatBubble.classList.add('show');
+    let i = 0; chatText.textContent = '';
+    typeTimer = setInterval(()=>{
+      i++; chatText.textContent = text.slice(0,i);
+      if(i>=text.length){ clearInterval(typeTimer); typeTimer=null; }
+    },45);
+    chatHide = setTimeout(()=>chatBubble.classList.remove('show'), ms||3800);
+  }
+
+  document.querySelectorAll('.states button[data-state]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const s = b.dataset.state;
+      clearCycle();
+      if(s==='low' || s==='idle') setState(s);
+      else setState(s, 3200);
+      showChat(pick(LINES[s]), 3400);
+      statusEl.textContent = s==='low' ? '积分告急' : (s==='error' ? '查询失败' : '陪你一起搬砖');
+    });
+  });
+
+  const autoBtn = document.getElementById('autoBtn');
+  autoBtn.addEventListener('click',()=>{
+    autoOn = !autoOn;
+    autoBtn.textContent = '自动演示：' + (autoOn ? '开' : '关');
+    if(autoOn) scheduleAuto(); else { clearTimeout(autoTimer); clearCycle(); }
+  });
+
+  function clearCycle(){ cycleTimers.forEach(clearTimeout); cycleTimers.length = 0; }
+  function runCycle(){
+    clearCycle();
+    setState('thinking'); showChat(pick(LINES.thinking), 2500);
+    cycleTimers.push(setTimeout(()=>{ setState('working'); showChat(pick(LINES.working),2700); },2600));
+    cycleTimers.push(setTimeout(()=>{ setState('success'); showChat(pick(LINES.success),2300); },5400));
+    cycleTimers.push(setTimeout(()=>setState('idle'),7800));
+  }
+  function scheduleAuto(){
+    clearTimeout(autoTimer);
+    if(!autoOn) return;
+    autoTimer = setTimeout(()=>{ if(state==='idle'||state==='low') runCycle(); scheduleAuto(); }, 9000 + Math.random()*8000);
+  }
+
+  let clickTimer = null;
+  pet.addEventListener('click',()=>{
+    if(clickTimer){ clearTimeout(clickTimer); clickTimer=null; showChat('（双击：打开设置）',2600); return; }
+    clickTimer = setTimeout(()=>{
+      clickTimer=null;
+      pet.classList.remove('tap'); void pet.offsetWidth; pet.classList.add('tap');
+      setTimeout(()=>pet.classList.remove('tap'),540);
+      setState('tap',1800);
+      showChat(pick(TAP_LINES),3200);
+    },220);
+  });
+
+  function applyGaze(){
+    EYE_IDS.forEach(n=>{
+      const el = document.getElementById('eyes'+n);
+      if(el) el.style.transform = 'translate('+gazeX+'px,'+gazeY+'px)';
+    });
+  }
+  window.addEventListener('mousemove',(e)=>{
+    const r = charEl.getBoundingClientRect();
+    if(!r.width) return;
+    const cx = r.left + r.width*(110/220);
+    const cy = r.top + r.height*(92/200);
+    let dx = (e.clientX-cx)/(r.width*0.6);
+    let dy = (e.clientY-cy)/(r.height*0.6);
+    dx = Math.max(-1,Math.min(1,dx)); dy = Math.max(-1,Math.min(1,dy));
+    gazeX = dx*4; gazeY = dy*3;
+    applyGaze();
+  });
+
+  function visibleEyes(){
+    for(const n of EYE_IDS){
+      const el = document.getElementById('eyes'+n);
+      if(el && window.getComputedStyle(el).display !== 'none') return el;
+    }
+    return null;
+  }
+  function blink(){
+    const el = visibleEyes();
+    if(!el) return;
+    el.style.transform = 'translate('+gazeX+'px,'+gazeY+'px) scaleY(.12)';
+    setTimeout(()=>{ el.style.transform = 'translate('+gazeX+'px,'+gazeY+'px)'; },120);
+  }
+  function scheduleBlink(){
+    setTimeout(()=>{ blink(); if(Math.random()<0.25) setTimeout(blink,220); scheduleBlink(); },3200+Math.random()*4200);
+  }
+
+  scheduleBlink();
+  scheduleAuto();
+  setTimeout(()=>showChat('下午好，开工了',3600),700);
+})();
+</script>
 </body>
 </html>

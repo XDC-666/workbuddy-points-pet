@@ -32,7 +32,20 @@ function defaultConfig() {
     lowBalanceThreshold: 5,
     scale: 1.0,
     idleFade: true,
+    autoPlay: true,
     quotes: ['积分要省着花~', '摸鱼一时爽', '该充能啦', '今天也要好好干活'],
+    tapLines: [
+      '干嘛戳我～',
+      '别闹，我干活呢',
+      '再点一次试试？',
+      '哎哟，痒！',
+      '我是有尊严的桌宠',
+      '积分要省着花哦',
+      '你又在摸鱼吧？',
+      '收到，我在听',
+      '手痒痒是吧',
+      '摸够了没？',
+    ],
   };
 }
 
@@ -68,7 +81,7 @@ function saveConfig(cfg) {
 function applyScale(scale) {
   if (!win) return;
   const s = Number(scale) || 1;
-  win.setSize(Math.round(260 * s), Math.round(300 * s));
+  win.setSize(Math.round(280 * s), Math.round(360 * s));
 }
 
 function pickQuote() {
@@ -119,10 +132,10 @@ function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   const s = Number(config.scale) || 1;
   win = new BrowserWindow({
-    width: Math.round(260 * s),
-    height: Math.round(300 * s),
-    x: width - Math.round(280 * s),
-    y: height - Math.round(320 * s),
+    width: Math.round(280 * s),
+    height: Math.round(360 * s),
+    x: width - Math.round(300 * s),
+    y: height - Math.round(380 * s),
     transparent: true,
     frame: false,
     alwaysOnTop: true,

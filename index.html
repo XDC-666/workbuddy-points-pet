@@ -28,13 +28,50 @@
     55% { transform: translateY(-10px) rotate(1deg); }
     75% { transform: translateY(0) rotate(0deg); }
   }
-  #pet.tap { animation: tapWiggle .45s ease; }
+  #pet.tap { animation: tapWiggle .5s ease; }
   @keyframes tapWiggle {
     0%, 100% { transform: scale(1) rotate(0); }
-    25% { transform: scale(0.95) rotate(-3deg); }
-    50% { transform: scale(1.02) rotate(3deg); }
-    75% { transform: scale(0.98) rotate(-1deg); }
+    20% { transform: scale(1.08, .9) rotate(-4deg); }
+    45% { transform: scale(.94, 1.06) rotate(4deg); }
+    70% { transform: scale(1.03, .97) rotate(-2deg); }
   }
+
+  /* ---- 对话气泡（点击/状态提示） ---- */
+  #chatBubble {
+    position: absolute;
+    left: 50%; bottom: 100%;
+    transform: translateX(-50%) translateY(-6px);
+    margin-bottom: 2px;
+    max-width: 210px;
+    padding: 8px 13px;
+    border-radius: 14px;
+    font-size: 12.5px; line-height: 1.5;
+    color: #f0f4f8;
+    text-align: center;
+    white-space: pre-wrap;
+    background: rgba(18, 22, 34, .82);
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 10px 26px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    opacity: 0; visibility: hidden;
+    transition: opacity .28s, transform .28s, visibility .28s;
+    pointer-events: none;
+    z-index: 20;
+  }
+  #chatBubble.show {
+    opacity: 1; visibility: visible;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  #chatBubble::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(18, 22, 34, .82);
+  }
+  #chatBubble .caret { opacity: .8; }
 
   /* ---- 角色容器 ---- */
   #char {
@@ -42,29 +79,77 @@
     width: 160px; height: 150px;
     margin: 0 auto;
     filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+    transition: filter .35s;
   }
   #char svg { display: block; width: 100%; height: 100%; }
 
-  /* 眼睛发光脉冲 */
-  .eye-glow {
-    animation: eyePulse 2.4s ease-in-out infinite;
-  }
-  @keyframes eyePulse {
-    0%, 90%, 100% { opacity: .85; }
-    45% { opacity: 1; }
-  }
+  /* ---- 表情切换 ---- */
+  .eyes { display: none; }
+  body.st-idle #eyesNormal,
+  body.st-low #eyesNormal { display: block; }
+  body.st-thinking #eyesThink { display: block; }
+  body.st-working #eyesWork { display: block; }
+  body.st-success #eyesHappy { display: block; }
+  body.st-error #eyesError { display: block; }
+  body.st-tap #eyesTap { display: block; }
+
+  /* 嘴巴：成功时咧嘴笑，思考时抿嘴 */
+  #mouth, #mouthHappy { transition: opacity .25s; }
+  body.st-success #mouth { opacity: 0; }
+  body.st-success #mouthHappy { opacity: 1; }
+  body.st-thinking #mouth { opacity: .45; }
+  body.st-working #mouth { opacity: .7; }
+
+  .eye-glow { animation: eyePulse 2.4s ease-in-out infinite; }
+  @keyframes eyePulse { 0%, 90%, 100% { opacity: .85; } 45% { opacity: 1; } }
+
+  /* 眨眼由 renderer.js 随机触发，避免与眼睛跟随的 transform 冲突 */
+  #eyesNormal { transform-origin: 110px 92px; }
+  .eyes { transform-box: fill-box; transform-origin: center; }
 
   /* 面罩反光扫过 */
-  .visor-sheen {
-    animation: sheen 4.5s ease-in-out infinite;
-  }
+  .visor-sheen { animation: sheen 4.5s ease-in-out infinite; }
   @keyframes sheen {
     0%, 80%, 100% { transform: translateX(-40px); opacity: 0; }
     35% { transform: translateX(40px); opacity: .55; }
   }
 
-  /* 低余额：整体变暗 + 角色微颤 */
-  body.low #pet { animation: hover 3.6s ease-in-out infinite, shiver 2.2s ease-in-out infinite; }
+  /* ---- 状态动画 ---- */
+  /* 思考：头部微晃 + 灯快闪 */
+  body.st-thinking #char { animation: tilt 1.6s ease-in-out infinite; }
+  @keyframes tilt {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-4deg); }
+    75% { transform: rotate(4deg); }
+  }
+  /* 工作：忙碌抖动 */
+  body.st-working #char { animation: busy .55s ease-in-out infinite; }
+  @keyframes busy {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-2px, 1px); }
+    50% { transform: translate(2px, -1px); }
+    75% { transform: translate(-1px, -1px); }
+  }
+  /* 成功：开心弹跳 */
+  body.st-success #char { animation: bounce .7s ease; }
+  @keyframes bounce {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-18px) scale(1.05, .95); }
+    55% { transform: translateY(0) scale(.95, 1.05); }
+    75% { transform: translateY(-7px) scale(1); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  /* 错误：摇头 */
+  body.st-error #char { animation: shake .6s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-6px); }
+    35% { transform: translateX(6px); }
+    55% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  /* 低余额：颤抖 */
+  body.st-low #pet { animation: hover 3.6s ease-in-out infinite, shiver 2.2s ease-in-out infinite; }
   @keyframes shiver {
     0%, 100% { transform: translateX(0); }
     10% { transform: translateX(-2px); }
@@ -73,19 +158,22 @@
     40% { transform: translateX(1px); }
     50% { transform: translateX(0); }
   }
-  body.low #char { filter: drop-shadow(0 18px 28px rgba(0,0,0,.45)) saturate(.7) brightness(.9); }
-  body.low .eye-glow { animation: eyePulse 2.4s ease-in-out infinite, sadBlink 3s infinite; }
-  @keyframes sadBlink {
-    0%, 90%, 100% { opacity: .6; }
-    95% { opacity: .2; }
-  }
+  body.st-low #char { filter: drop-shadow(0 18px 28px rgba(0,0,0,.45)) saturate(.65) brightness(.88); }
   #tear { opacity: 0; transition: opacity .4s; }
-  body.low #tear { opacity: .85; }
+  body.st-low #tear { opacity: .9; }
+
+  /* 头顶指示灯颜色随状态 */
+  #topLight { fill: #2bd4ff; transition: fill .3s; }
+  body.st-thinking #topLight, body.st-working #topLight { fill: #ffb84d; }
+  body.st-success #topLight { fill: #4ade80; }
+  body.st-error #topLight { fill: #ff6b6b; }
+  body.st-low #topLight { fill: #ff9b5a; }
+  body.st-tap #topLight { fill: #b78cff; }
 
   /* ---- 积分气泡（玻璃拟态） ---- */
   #bubble {
     position: relative;
-    margin: -6px auto 0;
+    margin: -4px auto 0;
     padding: 10px 14px;
     width: fit-content; min-width: 150px; max-width: 220px;
     border-radius: 16px;
@@ -93,12 +181,9 @@
     text-align: center;
     background: rgba(18, 22, 34, .68);
     border: 1px solid rgba(255,255,255,.12);
-    box-shadow:
-      0 12px 30px rgba(0,0,0,.45),
-      inset 0 1px 0 rgba(255,255,255,.08);
+    box-shadow: 0 12px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
-    transition: transform .25s, opacity .25s;
   }
   #bubble::before {
     content: '';
@@ -131,7 +216,7 @@
     40% { transform: scale(1.22); }
     100% { transform: scale(1); }
   }
-  body.low #balance {
+  body.st-low #balance {
     background: linear-gradient(180deg, #ffd6d6 0%, #ff8a8a 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -206,11 +291,13 @@
 </head>
 <body>
   <div id="pet">
+    <!-- 对话气泡（点击/状态提示） -->
+    <div id="chatBubble"><span class="chat-text"></span></div>
+
     <!-- 机器人角色 -->
     <div id="char">
       <svg viewBox="0 0 220 200" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <!-- 金属头盔渐变 -->
           <radialGradient id="helmGrad" cx="35%" cy="30%" r="75%">
             <stop offset="0%" stop-color="#ffffff" />
             <stop offset="40%" stop-color="#f2f5fa" />
@@ -222,38 +309,26 @@
             <stop offset="50%" stop-color="#e3e8ef" />
             <stop offset="100%" stop-color="#b8c3d1" />
           </linearGradient>
-          <!-- 面罩深色反光 -->
           <radialGradient id="visorGrad" cx="50%" cy="25%" r="80%">
             <stop offset="0%" stop-color="#2b3a52" />
             <stop offset="45%" stop-color="#111827" />
             <stop offset="100%" stop-color="#05080f" />
           </radialGradient>
-          <!-- 眼睛青光 -->
           <linearGradient id="eyeGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#8ff6ff" />
             <stop offset="100%" stop-color="#2bd4ff" />
           </linearGradient>
           <filter id="eyeGlow" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
           <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceAlpha" stdDeviation="5" />
             <feOffset dx="0" dy="6" result="offsetblur" />
-            <feComponentTransfer>
-              <feFuncA type="linear" slope=".35" />
-            </feComponentTransfer>
-            <feMerge>
-              <feMergeNode in="offsetblur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+            <feComponentTransfer><feFuncA type="linear" slope=".35" /></feComponentTransfer>
+            <feMerge><feMergeNode in="offsetblur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <clipPath id="visorClip">
-            <ellipse cx="110" cy="88" rx="56" ry="44" />
-          </clipPath>
+          <clipPath id="visorClip"><ellipse cx="110" cy="88" rx="56" ry="44" /></clipPath>
         </defs>
 
         <!-- 机身/下巴 -->
@@ -272,10 +347,8 @@
 
         <!-- 面罩 -->
         <ellipse cx="110" cy="88" rx="60" ry="48" fill="url(#visorGrad)" stroke="#0b111c" stroke-width="3" />
-
-        <!-- 面罩反光扫过 -->
         <g clip-path="url(#visorClip)">
-          <rect x="40" y="40" width="40" height="100" fill="url(#sheenGrad)" class="visor-sheen" opacity=".35" />
+          <rect x="40" y="40" width="40" height="100" fill="url(#sheenGrad)" class="visor-sheen" />
           <linearGradient id="sheenGrad" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stop-color="rgba(255,255,255,0)" />
             <stop offset="50%" stop-color="rgba(255,255,255,.55)" />
@@ -283,19 +356,58 @@
           </linearGradient>
         </g>
 
-        <!-- 眼睛 -->
-        <g class="eye-glow" filter="url(#eyeGlow)">
+        <!-- ===== 表情：待机 ===== -->
+        <g id="eyesNormal" class="eyes eye-glow" filter="url(#eyeGlow)">
           <ellipse cx="88" cy="92" rx="14" ry="9" fill="url(#eyeGrad)" />
           <ellipse cx="132" cy="92" rx="14" ry="9" fill="url(#eyeGrad)" />
           <circle cx="92" cy="89" r="3" fill="#fff" opacity=".85" />
           <circle cx="136" cy="89" r="3" fill="#fff" opacity=".85" />
         </g>
 
-        <!-- 小嘴巴 -->
-        <path d="M104 112 Q110 117 116 112" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" />
+        <!-- ===== 表情：思考 ===== -->
+        <g id="eyesThink" class="eyes eye-glow" filter="url(#eyeGlow)">
+          <ellipse cx="88" cy="89" rx="12" ry="5" fill="url(#eyeGrad)" />
+          <ellipse cx="132" cy="89" rx="12" ry="5" fill="url(#eyeGrad)" />
+          <path d="M74 78 L101 84" stroke="#8ff6ff" stroke-width="3" stroke-linecap="round" opacity=".75" fill="none" />
+          <path d="M146 78 L119 84" stroke="#8ff6ff" stroke-width="3" stroke-linecap="round" opacity=".75" fill="none" />
+        </g>
 
+        <!-- ===== 表情：工作中 ===== -->
+        <g id="eyesWork" class="eyes eye-glow" filter="url(#eyeGlow)">
+          <ellipse cx="88" cy="94" rx="11" ry="10" fill="url(#eyeGrad)" />
+          <ellipse cx="132" cy="94" rx="11" ry="10" fill="url(#eyeGrad)" />
+          <circle cx="90" cy="91" r="2.5" fill="#fff" opacity=".9" />
+          <circle cx="134" cy="91" r="2.5" fill="#fff" opacity=".9" />
+          <path d="M76 76 L100 82" stroke="#7d90aa" stroke-width="3" stroke-linecap="round" fill="none" />
+          <path d="M144 76 L120 82" stroke="#7d90aa" stroke-width="3" stroke-linecap="round" fill="none" />
+        </g>
+
+        <!-- ===== 表情：成功（开心弯月眼） ===== -->
+        <g id="eyesHappy" class="eyes eye-glow" filter="url(#eyeGlow)">
+          <path d="M75 97 Q88 81 101 97" stroke="url(#eyeGrad)" stroke-width="7" fill="none" stroke-linecap="round" />
+          <path d="M119 97 Q132 81 145 97" stroke="url(#eyeGrad)" stroke-width="7" fill="none" stroke-linecap="round" />
+        </g>
+
+        <!-- ===== 表情：错误 ===== -->
+        <g id="eyesError" class="eyes eye-glow" filter="url(#eyeGlow)">
+          <path d="M80 87 L96 97 M96 87 L80 97" stroke="#ff7a7a" stroke-width="5" stroke-linecap="round" fill="none" />
+          <path d="M124 87 L140 97 M140 87 L124 97" stroke="#ff7a7a" stroke-width="5" stroke-linecap="round" fill="none" />
+        </g>
+
+        <!-- ===== 表情：被戳（眨眼惊讶） ===== -->
+        <g id="eyesTap" class="eyes eye-glow" filter="url(#eyeGlow)">
+          <circle cx="88" cy="92" r="11" fill="url(#eyeGrad)" />
+          <circle cx="132" cy="92" r="11" fill="url(#eyeGrad)" />
+          <circle cx="91" cy="88" r="3.5" fill="#fff" opacity=".9" />
+          <circle cx="135" cy="88" r="3.5" fill="#fff" opacity=".9" />
+        </g>
+
+        <!-- 小嘴巴 -->
+        <path id="mouth" d="M104 112 Q110 117 116 112" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" />
+        <!-- 开心嘴巴 -->
+        <path id="mouthHappy" d="M100 110 Q110 121 120 110" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0" />
         <!-- 头顶指示灯 -->
-        <circle cx="110" cy="32" r="5" fill="#2bd4ff" filter="url(#eyeGlow)" opacity=".9">
+        <circle id="topLight" cx="110" cy="32" r="5" filter="url(#eyeGlow)" opacity=".9">
           <animate attributeName="opacity" values=".6;1;.6" dur="2s" repeatCount="indefinite" />
         </circle>
 
@@ -349,7 +461,12 @@
 
       <label class="row"><input type="checkbox" name="idleFade" /> 闲置时半透明</label>
 
-      <label>随机语录（每行一条）</label>
+      <label class="row"><input type="checkbox" name="autoPlay" /> 自动模拟工作状态</label>
+
+      <label>点击桌宠时说的话（每行一条）</label>
+      <textarea name="tapLines"></textarea>
+
+      <label>待机语录（每行一条）</label>
       <textarea name="quotes"></textarea>
 
       <div class="actions">
