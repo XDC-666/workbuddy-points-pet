@@ -1,8 +1,12 @@
 # WorkBuddy 积分桌宠
 
+> ⚠️ **免责声明**：WorkBuddy 是其各自所有者的产品名称。本项目是独立的社区开源工具，**与 WorkBuddy 无隶属关系，也未获其官方背书**。内置机器人形象为原创示例素材，可自由替换。
+
 桌面悬浮宠物，实时显示你的 AI 助手剩余积分。灵感来自网上很火的 DeepSeek 鲸鱼余额桌宠，但**数据源完全可配置**——手动录入、本地 JSON 文件、或任意 HTTP 余额接口都行。Electron 单文件窗口，双击即用，开源出去别人也能跑。
 
-> 说明：WorkBuddy 目前**没有公开的积分管询 API**，本地也只缓存了使用次数、没有余额。所以本桌宠默认用「手动录入 / 本地文件」模式显示积分；如果你有自己的余额接口（比如 DeepSeek、或自建服务），切到 HTTP 模式即可自动刷新。
+> 说明：WorkBuddy 目前**没有公开的积分查询 API**，本地也只缓存了使用次数、没有余额。所以本桌宠默认用「手动录入 / 本地文件」模式显示积分；如果你有自己的余额接口（比如 DeepSeek、或自建服务），切到 HTTP 模式即可自动刷新。
+
+🔒 隐私：纯本地运行，无上传、无遥测、无远程端口。详见 [PRIVACY.md](./PRIVACY.md)。
 
 ## 功能
 
@@ -93,3 +97,14 @@ Electron（透明窗 + 原生托盘/菜单）+ 内联 SVG 角色 + 前端轮询�
 ## 开源协议
 
 MIT
+
+## 相关项目（同类开源桌宠）
+
+本项目不是唯一，下面这些也是社区开源的 WorkBuddy / AI 桌宠，供参考与学习：
+
+- [STFQ/agent-buddy-workbuddy](https://github.com/STFQ/agent-buddy-workbuddy) — 显示 WorkBuddy 积分 + 实时 agent 状态（macOS）
+- [xiaoshuxiaofu/WorkBuddy-pet](https://github.com/xiaoshuxiaofu/WorkBuddy-pet) — 聊天感知动画、多角色切换（Windows）
+- [FlashFamily/workbuddy-buddy](https://github.com/FlashFamily/workbuddy-buddy) — 多伙伴 + hooks 联动（Rust/Tauri，macOS）
+- [oahc09/workbuddy-pet](https://github.com/oahc09/workbuddy-pet) — 像素桌宠 + 本地 HTTP 联动（跨平台）
+
+> 它们均为独立社区项目，与 WorkBuddy 无官方隶属关系。
