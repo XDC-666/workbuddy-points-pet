@@ -89,7 +89,7 @@ function saveConfig(cfg) {
 function applyScale(scale) {
   if (!win) return;
   const s = Number(scale) || 1;
-  win.setSize(Math.round(280 * s), Math.round(360 * s));
+  win.setSize(Math.round(280 * s), Math.round(520 * s));
 }
 
 function pickQuote() {
@@ -181,9 +181,9 @@ function createWindow() {
   const s = Number(config.scale) || 1;
   win = new BrowserWindow({
     width: Math.round(280 * s),
-    height: Math.round(400 * s),
+    height: Math.round(520 * s),
     x: width - Math.round(300 * s),
-    y: height - Math.round(420 * s),
+    y: height - Math.round(540 * s),
     transparent: true,
     frame: false,
     alwaysOnTop: true,

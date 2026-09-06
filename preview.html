@@ -15,14 +15,14 @@
   }
   .stage {
     position: relative;
-    width: 340px; height: 400px;
+    width: 340px; height: 520px;
     display: flex; align-items: flex-end; justify-content: center;
     padding-bottom: 8px;
   }
   #pet {
     position: relative;
     width: 220px;
-    padding-top: 76px;
+    padding-top: 130px;
     cursor: pointer;
     animation: hover 3.6s ease-in-out infinite;
     transform-origin: bottom center;
@@ -44,9 +44,9 @@
   /* 对话气泡 */
   #chatBubble {
     position: absolute;
-    left: 50%; top: 100%;
-    transform: translateX(-50%) translateY(6px);
-    margin-top: 2px;
+    left: 50%; bottom: 100%;
+    transform: translateX(-50%) translateY(-6px);
+    margin-bottom: 6px;
     max-width: 200px;
     padding: 7px 11px;
     border-radius: 14px;
@@ -64,12 +64,12 @@
     pointer-events: none;
     z-index: 20;
   }
-  #chatBubble.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-6px); }
+  #chatBubble.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-12px); }
   #chatBubble::after {
-    content: ''; position: absolute; bottom: 100%; left: 50%;
+    content: ''; position: absolute; top: 100%; left: 50%;
     transform: translateX(-50%);
     border: 6px solid transparent;
-    border-bottom-color: rgba(18, 22, 34, .82);
+    border-top-color: rgba(18, 22, 34, .82);
   }
 
   #char {

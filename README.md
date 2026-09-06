@@ -204,6 +204,23 @@ WorkBuddy 官方后台会调用内部接口返回剩余积分。你可以用浏�
 - Cookie 会过期，过期后按上面步骤重新复制一次即可。
 - 你也可以换成 `https://www.workbuddy.cn/activity/growth/energy`（GET，jsonPath 填 `data.balance`）显示成长能量。
 
+**为什么有时候会 401 / 查询失败？**
+
+WorkBuddy 没有公开的第三方积分 API，这个接口是浏览器页面内部调用的。APISIX 网关会把 `session` 等登录态与网络环境绑定，因此：
+
+- 从 AI 执行环境、异地 IP、过期的 Cookie 去请求，通常会返回 `401 Authorization Required`。
+- 桌宠跑在你**本机**、和浏览器同一个 IP，请求头又配齐的情况下，一般能正常拿到 200。
+
+如果你复制 Cookie 后本机仍 401，通常是 Cookie 被轮换/过期了，请重新登录 `workbuddy.cn` 再复制一次。也可以切回 `file` 模式，用「钩子自动上报积分」做估算。
+
+**别人是怎么拿到 WorkBuddy 积分的？**
+
+社区项目的常见做法有三种：
+
+1. **不显示积分，只做状态联动**：大多数开源桌宠（如 `FlashFamily/workbuddy-buddy`、`oahc09/workbuddy-pet`、`xiaoshuxiaofu/WorkBuddy-pet`）只通过 WorkBuddy hooks 读取 agent 事件来切换表情，不涉及积分。
+2. **读取 WorkBuddy 内部/私有接口**：`STFQ/agent-buddy-workbuddy` 号称安装 WorkBuddy 并登录后可直接读取 credits，但没有开源具体实现，可能是调用了 WorkBuddy 本地安装中的私有端点或浏览器可访问的内部 API。
+3. **Cookie 抓包模拟浏览器**：本项目目前采用的方式，门槛最低、跨平台，但需要定期更新 Cookie。
+
 如果你没有抓包条件，也可以用上面「钩子自动上报积分」的方式，让 `file` 模式读取钩子维护的 `~/.workbuddy-points-pet/balance.json`，余额随交互估算扣减。
 
 **② DeepSeek 余额（自动）**
