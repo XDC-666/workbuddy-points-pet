@@ -44,9 +44,9 @@
   /* 对话气泡 */
   #chatBubble {
     position: absolute;
-    left: 50%; bottom: 100%;
-    transform: translateX(-50%) translateY(-6px);
-    margin-bottom: 2px;
+    left: 50%; top: 100%;
+    transform: translateX(-50%) translateY(6px);
+    margin-top: 2px;
     max-width: 200px;
     padding: 7px 11px;
     border-radius: 14px;
@@ -64,12 +64,12 @@
     pointer-events: none;
     z-index: 20;
   }
-  #chatBubble.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-12px); }
+  #chatBubble.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-6px); }
   #chatBubble::after {
-    content: ''; position: absolute; top: 100%; left: 50%;
+    content: ''; position: absolute; bottom: 100%; left: 50%;
     transform: translateX(-50%);
     border: 6px solid transparent;
-    border-top-color: rgba(18, 22, 34, .82);
+    border-bottom-color: rgba(18, 22, 34, .82);
   }
 
   #char {

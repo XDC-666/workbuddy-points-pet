@@ -66,14 +66,32 @@ async function readFileBalance(cfg) {
 }
 
 // HTTP 数据源：拉取余额接口，按 jsonPath 解析
+// 默认补齐浏览器的 Sec-Fetch / User-Agent 等头，避免 Electron 默认 UA 被网关拒绝。
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 SLBrowser/9.0.8.7271 SLBChan/123 SLBVPV/64-bit';
+const DEFAULT_HEADERS = {
+  'accept': 'application/json, text/plain, */*',
+  'accept-language': 'zh-CN,zh;q=0.9',
+  'sec-ch-ua': '"Chromium";v="9", "Not?A_Brand";v="8"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'user-agent': BROWSER_UA,
+  'x-client-platform': 'web',
+};
+
 async function readHttpBalance(cfg) {
   const h = cfg.http || {};
   if (!h.url) throw new Error('http 数据源缺少 url');
-  const headers = Object.assign({}, h.headers);
+  const headers = Object.assign({}, DEFAULT_HEADERS, h.headers);
   const opts = { method: h.method || 'GET', headers };
   if (h.body !== undefined && h.body !== '') {
     if (typeof h.body === 'object') opts.body = JSON.stringify(h.body);
     else opts.body = String(h.body);
+    if (!headers['content-type'] && !headers['Content-Type']) {
+      headers['content-type'] = 'application/json';
+    }
   }
   const resp = await fetch(h.url, opts);
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
