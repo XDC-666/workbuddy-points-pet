@@ -78,8 +78,10 @@ npm start
 | `file.path` | 可选，指向一个含余额字段的本地 JSON 文件 |
 | `file.jsonPath` | 该文件里余额字段路径，默认 `balance` |
 | `http.url` | 余额接口地址 |
-| `http.headers` | 请求头，通常放 `Authorization: Bearer <key>` |
-| `http.jsonPath` | 从返回 JSON 里取余额的路径，支持 `a.b[0].c` |
+| `http.method` | 请求方法，默认 `GET` |
+| `http.headers` | 请求头，如 `Authorization`、`Cookie` |
+| `http.body` | POST 请求体（对象或字符串） |
+| `http.jsonPath` | 从返回 JSON 里取余额的路径，支持 `a.b[0].c`，也支持 `a.b[*].c` 对数组该字段求和 |
 | `refreshIntervalSec` | 刷新间隔（秒，最小 5） |
 | `lowBalanceThreshold` | 低于此值弹系统提醒 |
 | `scale` | 缩放倍数 |
@@ -174,7 +176,35 @@ WorkBuddy ──hooks──▶ status-hook.mjs
 
 **① WorkBuddy 积分（当前推荐）**
 
-没有公开 API。装了钩子后，`file` 模式会**自动优先读取**钩子维护的 `~/.workbuddy-points-pet/balance.json`（见上「钩子自动上报积分」），余额随交互实时变化，无需手动改。未装钩子时则显示设置里填的「当前积分」作为回退值。也可以指向任意本地 JSON 文件（配 `file.path`）。
+WorkBuddy 官方后台会调用内部接口返回剩余积分。你可以用浏览器 DevTools 抓到它，再配成 `http` 数据源，让桌宠直接显示真实余额：
+
+1. 浏览器打开 `https://www.workbuddy.cn/profile/plans-usage`，按 `F12` → Network（网络）。
+2. 刷新页面，找到请求 `get-user-resource-summary`。
+3. 右键该请求 → Copy → Copy as cURL，或者查看 Headers 里的 **Cookie** 字段并复制整行。
+4. 把下面配置里的 `Cookie` 替换为你复制的值，保存到 `%APPDATA%\workbuddy-points-pet\config.json`：
+
+```json
+{
+  "source": "http",
+  "label": "WorkBuddy 积分",
+  "http": {
+    "url": "https://www.workbuddy.cn/billing/meter/get-user-resource-summary",
+    "method": "POST",
+    "body": {},
+    "headers": {
+      "Content-Type": "application/json",
+      "Cookie": "粘贴你的 Cookie"
+    },
+    "jsonPath": "data.Packages[*].CycleRemainCapacity"
+  }
+}
+```
+
+- `data.Packages[*].CycleRemainCapacity` 会把所有资源包的剩余积分相加。
+- Cookie 会过期，过期后按上面步骤重新复制一次即可。
+- 你也可以换成 `https://www.workbuddy.cn/activity/growth/energy`（GET，jsonPath 填 `data.balance`）显示成长能量。
+
+如果你没有抓包条件，也可以用上面「钩子自动上报积分」的方式，让 `file` 模式读取钩子维护的 `~/.workbuddy-points-pet/balance.json`，余额随交互估算扣减。
 
 **② DeepSeek 余额（自动）**
 

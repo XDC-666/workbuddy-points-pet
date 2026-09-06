@@ -7,12 +7,14 @@
     "jsonPath": "balance"
   },
   "http": {
-    "url": "https://api.deepseek.com/user/balance",
-    "method": "GET",
+    "url": "https://www.workbuddy.cn/billing/meter/get-user-resource-summary",
+    "method": "POST",
+    "body": {},
     "headers": {
-      "Authorization": "Bearer YOUR_API_KEY"
+      "Content-Type": "application/json",
+      "Cookie": "从浏览器 DevTools 复制该请求的 Cookie"
     },
-    "jsonPath": "balance_infos[0].total_balance"
+    "jsonPath": "data.Packages[*].CycleRemainCapacity"
   },
   "refreshIntervalSec": 30,
   "lowBalanceThreshold": 5,

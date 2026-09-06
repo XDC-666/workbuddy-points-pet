@@ -1,19 +1,42 @@
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 
 const SPOOL_BALANCE = path.join(os.homedir(), '.workbuddy-points-pet', 'balance.json');
 
-// 按 "a.b[0].c" 形式从对象里取值
+// 按 "a.b[0].c" / "a.b[*].c" 形式从对象里取值
+// 支持 [*] 对数组内某个字段求和（用于多资源包积分汇总）
 function getByPath(obj, expr) {
   if (!expr || obj == null) return obj;
-  return expr.split('.').reduce((acc, key) => {
-    if (acc == null) return undefined;
-    const m = key.match(/^(\w+)(?:\[(\d+)\])?$/);
-    if (!m) return acc[key];
-    let v = acc[m[1]];
-    if (m[2] !== undefined) v = Array.isArray(v) ? v[Number(m[2])] : undefined;
-    return v;
-  }, obj);
+  const parts = expr.split('.');
+
+  function walk(current, idx) {
+    if (current == null) return undefined;
+    if (idx >= parts.length) return current;
+    const key = parts[idx];
+    const m = key.match(/^(\w+)(?:\[(\d+|\*)\])?$/);
+    if (!m) {
+      // 兜底：key 可能是纯字段名
+      return walk(current[key], idx + 1);
+    }
+    const name = m[1];
+    const index = m[2];
+    let v = current[name];
+    if (index === '*') {
+      if (!Array.isArray(v)) return undefined;
+      const rest = parts.slice(idx + 1).join('.');
+      if (!rest) return v;
+      const nums = v
+        .map((item) => getByPath(item, rest))
+        .filter((n) => typeof n === 'number' || (typeof n === 'string' && !Number.isNaN(Number(n))));
+      if (nums.length === 0) return undefined;
+      return nums.reduce((sum, n) => sum + Number(n), 0);
+    }
+    if (index !== undefined) v = Array.isArray(v) ? v[Number(index)] : undefined;
+    return walk(v, idx + 1);
+  }
+
+  return walk(obj, 0);
 }
 
 // 本地文件数据源：未指定 path 时优先读「钩子自动上报」维护的 balance.json，
@@ -47,7 +70,12 @@ async function readHttpBalance(cfg) {
   const h = cfg.http || {};
   if (!h.url) throw new Error('http 数据源缺少 url');
   const headers = Object.assign({}, h.headers);
-  const resp = await fetch(h.url, { method: h.method || 'GET', headers });
+  const opts = { method: h.method || 'GET', headers };
+  if (h.body !== undefined && h.body !== '') {
+    if (typeof h.body === 'object') opts.body = JSON.stringify(h.body);
+    else opts.body = String(h.body);
+  }
+  const resp = await fetch(h.url, opts);
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
   const json = await resp.json();
   const bal = getByPath(json, h.jsonPath);
