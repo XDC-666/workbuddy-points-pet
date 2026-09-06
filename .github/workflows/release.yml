@@ -88,6 +88,23 @@ jobs:
           ls -la dist/*.exe
           echo "安全扫描全部通过"
 
+      - name: 规范产物文件名
+        # GitHub 会把文件名中的空格转成点并丢弃中文，导致出现 "WorkBuddy.1.0.0.exe"
+        # 这种辨识度很低的名字。这里统一改成纯 ASCII 名称，方便他人识别与下载。
+        shell: bash
+        run: |
+          set -e
+          VER=$(node -p "require('./package.json').version")
+          cd dist
+          for f in *.exe; do
+            case "$f" in
+              *Setup*) mv "$f" "WorkBuddyPointsPet-$VER-Setup.exe" ;;
+              *)       mv "$f" "WorkBuddyPointsPet-$VER-Portable.exe" ;;
+            esac
+          done
+          echo "规范化后的产物："
+          ls -la *.exe
+
       - name: 上传构建产物（仅手动触发时）
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
