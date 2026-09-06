@@ -469,9 +469,18 @@
       <div id="fileCfg">
         <label>显示名称</label>
         <input type="text" name="label" />
-        <label>当前积分（手动模式）</label>
+        <label>当前积分（手动模式回退值）</label>
         <input type="number" name="balance" step="any" />
         <p class="hint">HTTP 模式下此项由接口返回，无需填写。</p>
+
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,.1);margin:14px 0" />
+        <label>钩子自动上报（安装钩子后生效）</label>
+        <label>我的初始积分</label>
+        <input type="number" name="initialBalance" step="any" />
+        <label>每次交互消耗</label>
+        <input type="number" name="cost" step="any" />
+        <label class="row"><input type="checkbox" name="autoDeduct" /> 启用自动扣减</label>
+        <p class="hint">需先运行 <code>npm run install-hook</code> 安装 WorkBuddy 钩子。每次对话/工具调用自动扣减，剩余积分实时显示。想重置余额：删掉 ~/.workbuddy-points-pet/balance.json 后再保存即可。</p>
       </div>
 
       <div id="httpCfg" style="display:none">

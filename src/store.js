@@ -1,4 +1,7 @@
 const fs = require('fs');
+const os = require('os');
+
+const SPOOL_BALANCE = path.join(os.homedir(), '.workbuddy-points-pet', 'balance.json');
 
 // 按 "a.b[0].c" 形式从对象里取值
 function getByPath(obj, expr) {
@@ -13,10 +16,20 @@ function getByPath(obj, expr) {
   }, obj);
 }
 
-// 本地文件数据源：未指定 path 时直接读 config.balance（手动模式）
+// 本地文件数据源：未指定 path 时优先读「钩子自动上报」维护的 balance.json，
+// 否则回退到手动录入的 config.balance（手动模式）。
 async function readFileBalance(cfg) {
   const fp = cfg.file && cfg.file.path;
   if (!fp) {
+    try {
+      const json = JSON.parse(fs.readFileSync(SPOOL_BALANCE, 'utf8'));
+      const bal = Number(json.balance);
+      if (!Number.isNaN(bal)) {
+        return { balance: bal, source: 'hook', raw: json, hookUpdatedAt: json.updatedAt };
+      }
+    } catch {
+      /* 没有钩子余额文件，回退手动模式 */
+    }
     return {
       balance: Number(cfg.balance) || 0,
       source: 'file',

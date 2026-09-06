@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, Notification, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { fetchBalance } = require('./src/store');
 const { startSpoolWatch } = require('./src/spool');
 
@@ -35,6 +36,9 @@ function defaultConfig() {
     idleFade: true,
     autoPlay: true,
     sound: true,
+    initialBalance: 1000,
+    costPerEvent: 1,
+    autoDeduct: true,
     quotes: ['积分要省着花~', '摸鱼一时爽', '该充能啦', '今天也要好好干活'],
     tapLines: [
       '干嘛戳我～',
@@ -75,6 +79,7 @@ function saveConfig(cfg) {
   } catch (e) {
     console.error('保存配置失败', e);
   }
+  syncHookPrefs();
   restartPolling();
   applyScale(config.scale);
   return config;
@@ -112,6 +117,32 @@ async function refreshNow() {
   } catch (e) {
     const msg = e && e.message ? e.message : String(e);
     if (win && !win.isDestroyed()) win.webContents.send('update', { error: msg, label: config.label });
+  }
+}
+
+function syncHookPrefs() {
+  try {
+    const dir = path.join(os.homedir(), '.workbuddy-points-pet');
+    fs.mkdirSync(dir, { recursive: true });
+    const prefs = {
+      initialBalance: Number(config.initialBalance) || 0,
+      costPerEvent: Number(config.costPerEvent) || 0,
+      autoDeduct: config.autoDeduct !== false,
+    };
+    fs.writeFileSync(path.join(dir, 'prefs.json'), JSON.stringify(prefs, null, 2));
+    // 余额基准：仅首次（balance.json 不存在）用 initialBalance 初始化；存在则保留，避免丢失已扣减
+    const balPath = path.join(dir, 'balance.json');
+    let cur = null;
+    try { cur = JSON.parse(fs.readFileSync(balPath, 'utf8')); } catch (e) { cur = null; }
+    if (!cur) {
+      fs.writeFileSync(balPath, JSON.stringify({
+        balance: Number(config.initialBalance) || 0,
+        updatedAt: new Date().toISOString(),
+        source: 'hook',
+      }, null, 2));
+    }
+  } catch (e) {
+    console.error('同步钩子积分偏好失败（不影响桌宠）', e);
   }
 }
 

@@ -20,6 +20,9 @@
   "idleFade": true,
   "autoPlay": true,
   "sound": true,
+  "initialBalance": 1000,
+  "costPerEvent": 1,
+  "autoDeduct": true,
   "feedCount": 0,
   "quotes": [
     "积分要省着花~",

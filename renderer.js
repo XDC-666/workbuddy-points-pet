@@ -422,6 +422,9 @@ function fillForm(c) {
   form.quotes.value = (c.quotes && c.quotes.length)
     ? c.quotes.join('\n')
     : DEFAULT_QUOTES.join('\n');
+  form.initialBalance.value = c.initialBalance;
+  form.cost.value = c.costPerEvent;
+  form.autoDeduct.checked = c.autoDeduct !== false;
   toggleSource();
 }
 
@@ -455,6 +458,9 @@ form.addEventListener('submit', (e) => {
       sound: form.sound.checked,
       tapLines: form.tapLines.value.split('\n').map((s) => s.trim()).filter(Boolean),
       quotes: form.quotes.value.split('\n').map((s) => s.trim()).filter(Boolean),
+      initialBalance: Number(form.initialBalance.value) || 0,
+      costPerEvent: Number(form.cost.value) || 0,
+      autoDeduct: form.autoDeduct.checked,
     });
     window.api.saveConfig(next).then((saved) => {
       cfg = saved;
