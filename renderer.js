@@ -7,6 +7,7 @@ const settings = document.getElementById('settings');
 const form = document.getElementById('form');
 const chatBubble = document.getElementById('chatBubble');
 const chatText = chatBubble.querySelector('.chat-text');
+const heartsBox = document.getElementById('hearts');
 
 // ---- 语录库 ----
 const DEFAULT_TAP_LINES = [
@@ -34,6 +35,7 @@ const STATE_LINES = {
   success: ['搞定！收工', '任务完成', '又活过了一天', '漂亮，干得不错', '这波稳了'],
   error: ['出问题了...', '这次没成功', '要不再试一次？'],
   low: ['积分告急，该充能啦', '余额不多了，省着点', '快没积分了哦'],
+  eat: ['好吃！', '谢谢投喂～', '再来一份！', '嗝～满足了', '你最好了！'],
 };
 
 function pick(arr) {
@@ -41,12 +43,63 @@ function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// ---- 音效（Web Audio 实时合成，不需要任何音频文件） ----
+let audioCtx = null;
+
+function ensureAudio() {
+  try {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  } catch (e) {
+    return null;
+  }
+}
+
+function tone(freq, dur, type, gain, delay) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + (delay || 0);
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(gain || 0.1, t0 + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.03);
+}
+
+const SFX = {
+  tap: () => { tone(680, 0.11, 'sine', 0.1); tone(920, 0.11, 'sine', 0.07, 0.055); },
+  think: () => { tone(460, 0.09, 'sine', 0.06); },
+  work: () => { tone(360, 0.08, 'triangle', 0.06); },
+  success: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.17, 'sine', 0.1, i * 0.07)); },
+  error: () => { tone(320, 0.16, 'triangle', 0.09); tone(210, 0.24, 'triangle', 0.08, 0.12); },
+  eat: () => { [523, 698, 880].forEach((f, i) => tone(f, 0.1, 'triangle', 0.09, i * 0.055)); },
+};
+
+function playSfx(name) {
+  if (cfg.sound === false) return;
+  const fn = SFX[name];
+  if (fn) {
+    try { fn(); } catch (e) { /* 音频不可用时静默 */ }
+  }
+}
+
 // ---- 状态机 ----
 let cfg = {};
 let state = 'idle';
 let isLow = false;
 let stateTimer = null;
-let backTimer = null;
+let realMode = false; // 是否已收到 WorkBuddy 真实事件
 
 function setState(next, backMs) {
   state = next;
@@ -57,9 +110,7 @@ function setState(next, backMs) {
   document.body.className = (keep + ' st-' + next).trim();
   if (stateTimer) clearTimeout(stateTimer);
   stateTimer = null;
-  if (backMs) {
-    stateTimer = setTimeout(goIdle, backMs);
-  }
+  if (backMs) stateTimer = setTimeout(goIdle, backMs);
 }
 
 function goIdle() {
@@ -93,7 +144,7 @@ function showChat(text, ms) {
 // ---- 眼睛：跟随鼠标 + 随机眨眼 ----
 let gazeX = 0;
 let gazeY = 0;
-const EYE_IDS = ['Normal', 'Think', 'Work', 'Happy', 'Error', 'Tap'];
+const EYE_IDS = ['Normal', 'Think', 'Work', 'Happy', 'Error', 'Tap', 'Eat'];
 
 function applyEyeTransform() {
   EYE_IDS.forEach((n) => {
@@ -136,12 +187,12 @@ function blink() {
 function scheduleBlink() {
   setTimeout(() => {
     blink();
-    if (Math.random() < 0.25) setTimeout(blink, 220); // 偶尔连眨两下
+    if (Math.random() < 0.25) setTimeout(blink, 220);
     scheduleBlink();
   }, 3200 + Math.random() * 4200);
 }
 
-// ---- 自动模拟工作状态 ----
+// ---- 自动模拟工作状态（未接真实状态时才用） ----
 let autoTimer = null;
 let cycleTimers = [];
 
@@ -157,10 +208,12 @@ function runWorkCycle() {
   cycleTimers.push(setTimeout(() => {
     setState('working');
     showChat(pick(STATE_LINES.working), 2700);
+    playSfx('work');
   }, 2600));
   cycleTimers.push(setTimeout(() => {
     setState('success');
     showChat(pick(STATE_LINES.success), 2300);
+    playSfx('success');
   }, 5400));
   cycleTimers.push(setTimeout(goIdle, 7800));
 }
@@ -168,12 +221,86 @@ function runWorkCycle() {
 function scheduleAuto() {
   if (autoTimer) clearTimeout(autoTimer);
   autoTimer = null;
-  if (!cfg.autoPlay) return;
+  if (!cfg.autoPlay || realMode) return;
   autoTimer = setTimeout(() => {
     if (state === 'idle' || state === 'low') runWorkCycle();
     scheduleAuto();
   }, 10000 + Math.random() * 14000);
 }
+
+// ---- 真实状态联动：读取 WorkBuddy 钩子写入的 spool ----
+const AGENT_MAP = {
+  SessionStart: { st: 'idle', lines: ['开工了，我在', '准备就绪'] },
+  UserPromptSubmit: { st: 'thinking', lines: ['收到，让我想想', '正在思考...', '这个问题有意思'] },
+  PreToolUse: { st: 'working', lines: ['调用工具中...', '正在执行', '让我查一下'] },
+  PostToolUse: { st: 'working', lines: ['工具跑完了', '拿到结果了'] },
+  SessionEnd: { st: 'idle', lines: ['收工，摸鱼~', '这波结束了'] },
+  Notification: { st: 'tap', lines: ['需要你确认一下', '在等你点头'] },
+  PreCompact: { st: 'working', lines: ['整理上下文中...'] },
+};
+
+function handleAgentEvent(rec) {
+  if (!rec || !rec.event) return;
+  if (!realMode) {
+    realMode = true; // 收到真实事件后停止模拟循环
+    clearCycle();
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = null;
+    showChat('已连接 WorkBuddy 实时状态', 3200);
+  }
+
+  if (rec.event === 'Stop') {
+    if (rec.stop) {
+      setState('thinking', 3000);
+      showChat('还在继续...', 2400);
+    } else {
+      setState('success', 2800);
+      showChat(pick(STATE_LINES.success), 3000);
+      playSfx('success');
+    }
+    return;
+  }
+
+  const m = AGENT_MAP[rec.event];
+  if (!m) return;
+  setState(m.st, m.st === 'idle' ? 0 : 4200);
+  showChat(pick(m.lines), 3000);
+  if (m.st === 'thinking') playSfx('think');
+  else if (m.st === 'working') playSfx('work');
+}
+
+if (window.api.onAgentEvent) window.api.onAgentEvent(handleAgentEvent);
+
+// ---- 喂食彩蛋 ----
+function spawnHearts() {
+  if (!heartsBox) return;
+  for (let i = 0; i < 5; i += 1) {
+    const h = document.createElement('div');
+    h.className = 'heart';
+    h.style.left = (70 + Math.random() * 70) + 'px';
+    h.style.animationDelay = (i * 0.11) + 's';
+    h.innerHTML =
+      '<svg viewBox="0 0 24 24" width="15" height="15">' +
+      '<path d="M12 21s-7-4.6-9.3-9A5.4 5.4 0 0 1 12 6.2 5.4 5.4 0 0 1 21.3 12c-2.3 4.4-9.3 9-9.3 9z" ' +
+      'fill="#ff8fa3"/></svg>';
+    heartsBox.appendChild(h);
+    setTimeout(() => h.remove(), 1700);
+  }
+}
+
+function feed() {
+  setState('eat', 2700);
+  showChat(pick(STATE_LINES.eat), 2900);
+  spawnHearts();
+  playSfx('eat');
+  const nextCount = (cfg.feedCount || 0) + 1;
+  cfg.feedCount = nextCount;
+  window.api.getConfig().then((cur) => {
+    window.api.saveConfig(Object.assign({}, cur, { feedCount: nextCount }));
+  });
+}
+
+if (window.api.onFeed) window.api.onFeed(feed);
 
 // ---- 点击互动（单击说台词 / 双击开设置） ----
 let dragging = false;
@@ -205,7 +332,6 @@ window.addEventListener('mouseup', () => {
     else if (lastScreenX > w - 40) window.api.snap('right');
     return;
   }
-  // 区分单击 / 双击
   if (clickTimer) {
     clearTimeout(clickTimer);
     clickTimer = null;
@@ -226,6 +352,7 @@ function doTap() {
   setState('tap', 1800);
   const lines = (cfg.tapLines && cfg.tapLines.length) ? cfg.tapLines : DEFAULT_TAP_LINES;
   showChat(pick(lines), 3200);
+  playSfx('tap');
   window.api.refresh();
 }
 
@@ -248,6 +375,7 @@ function applyData(d) {
     statusEl.classList.add('err');
     setState('error', 3000);
     showChat(STATE_LINES.error[0], 3000);
+    playSfx('error');
     return;
   }
   statusEl.classList.remove('err');
@@ -259,8 +387,7 @@ function applyData(d) {
   statusEl.textContent = d.quote || '';
 
   isLow = !!d.low;
-  // 低余额持续提醒；正常情况不打断当前互动状态
-  if (isLow && state !== 'tap' && state !== 'error') {
+  if (isLow && state !== 'tap' && state !== 'error' && state !== 'eat') {
     if (state !== 'low') setState('low');
     if (state === 'low') showChat(pick(STATE_LINES.low), 3600);
   } else if (!isLow && state === 'low') {
@@ -288,6 +415,7 @@ function fillForm(c) {
   form.threshold.value = c.lowBalanceThreshold;
   form.idleFade.checked = !!c.idleFade;
   form.autoPlay.checked = c.autoPlay !== false;
+  form.sound.checked = c.sound !== false;
   form.tapLines.value = (c.tapLines && c.tapLines.length)
     ? c.tapLines.join('\n')
     : DEFAULT_TAP_LINES.join('\n');
@@ -324,11 +452,13 @@ form.addEventListener('submit', (e) => {
       lowBalanceThreshold: Number(form.threshold.value) || 5,
       idleFade: form.idleFade.checked,
       autoPlay: form.autoPlay.checked,
+      sound: form.sound.checked,
       tapLines: form.tapLines.value.split('\n').map((s) => s.trim()).filter(Boolean),
       quotes: form.quotes.value.split('\n').map((s) => s.trim()).filter(Boolean),
     });
     window.api.saveConfig(next).then((saved) => {
       cfg = saved;
+      if (saved.sound !== false) playSfx('tap');
       scheduleAuto();
       closeSettings();
       window.api.refresh();
@@ -352,5 +482,8 @@ window.api.getConfig().then((c) => {
   setState('idle');
   scheduleBlink();
   scheduleAuto();
-  setTimeout(() => showChat(timeGreeting(), 3800), 800);
+  const fed = c.feedCount || 0;
+  setTimeout(() => {
+    showChat(fed > 0 ? ('你喂过我 ' + fed + ' 次啦') : timeGreeting(), 3800);
+  }, 800);
 });

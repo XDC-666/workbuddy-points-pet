@@ -11,4 +11,6 @@ contextBridge.exposeInMainWorld('api', {
   onUpdate: (cb) => ipcRenderer.on('update', (_e, data) => cb(data)),
   onConfig: (cb) => ipcRenderer.on('config', (_e, cfg) => cb(cfg)),
   onShowSettings: (cb) => ipcRenderer.on('show-settings', () => cb()),
+  onAgentEvent: (cb) => ipcRenderer.on('agent-event', (_e, rec) => cb(rec)),
+  onFeed: (cb) => ipcRenderer.on('feed', () => cb()),
 });

@@ -12,6 +12,8 @@
   "scripts": {
     "start": "electron .",
     "icons": "python scripts/gen-icon.py",
+    "install-hook": "node scripts/install-hook.mjs",
+    "uninstall-hook": "node scripts/install-hook.mjs --uninstall",
     "dist": "electron-builder --win --x64"
   },
   "devDependencies": {
@@ -30,6 +32,7 @@
       "renderer.js",
       "index.html",
       "src/**/*",
+      "scripts/**/*",
       "assets/**/*",
       "package.json"
     ],

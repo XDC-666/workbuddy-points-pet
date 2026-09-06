@@ -73,6 +73,21 @@
   }
   #chatBubble .caret { opacity: .8; }
 
+  /* ---- 喂食爱心 ---- */
+  #hearts {
+    position: absolute; left: 0; right: 0; bottom: 100%;
+    height: 60px; pointer-events: none; z-index: 15;
+  }
+  .heart {
+    position: absolute; bottom: 0; opacity: 0;
+    animation: floatUp 1.5s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translateY(0) scale(.5); }
+    22% { opacity: 1; transform: translateY(-10px) scale(1.05); }
+    100% { opacity: 0; transform: translateY(-54px) scale(.75); }
+  }
+
   /* ---- 角色容器 ---- */
   #char {
     position: relative;
@@ -92,6 +107,7 @@
   body.st-success #eyesHappy { display: block; }
   body.st-error #eyesError { display: block; }
   body.st-tap #eyesTap { display: block; }
+  body.st-eat #eyesEat { display: block; }
 
   /* 嘴巴：成功时咧嘴笑，思考时抿嘴 */
   #mouth, #mouthHappy { transition: opacity .25s; }
@@ -148,6 +164,12 @@
     55% { transform: translateX(-4px); }
     80% { transform: translateX(4px); }
   }
+  /* 进食：咀嚼 */
+  body.st-eat #char { animation: chew .38s ease-in-out infinite; }
+  @keyframes chew {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    50% { transform: translateY(3px) scaleY(.96); }
+  }
   /* 低余额：颤抖 */
   body.st-low #pet { animation: hover 3.6s ease-in-out infinite, shiver 2.2s ease-in-out infinite; }
   @keyframes shiver {
@@ -169,6 +191,7 @@
   body.st-error #topLight { fill: #ff6b6b; }
   body.st-low #topLight { fill: #ff9b5a; }
   body.st-tap #topLight { fill: #b78cff; }
+  body.st-eat #topLight { fill: #ff8fb1; }
 
   /* ---- 积分气泡（玻璃拟态） ---- */
   #bubble {
@@ -293,6 +316,8 @@
   <div id="pet">
     <!-- 对话气泡（点击/状态提示） -->
     <div id="chatBubble"><span class="chat-text"></span></div>
+    <!-- 喂食时飘出的爱心 -->
+    <div id="hearts"></div>
 
     <!-- 机器人角色 -->
     <div id="char">
@@ -402,6 +427,12 @@
           <circle cx="135" cy="88" r="3.5" fill="#fff" opacity=".9" />
         </g>
 
+        <!-- ===== 表情：进食（满足眯眼） ===== -->
+        <g id="eyesEat" class="eyes eye-glow" filter="url(#eyeGlow)">
+          <path d="M76 96 Q88 85 100 96" stroke="url(#eyeGrad)" stroke-width="6" fill="none" stroke-linecap="round" />
+          <path d="M120 96 Q132 85 144 96" stroke="url(#eyeGrad)" stroke-width="6" fill="none" stroke-linecap="round" />
+        </g>
+
         <!-- 小嘴巴 -->
         <path id="mouth" d="M104 112 Q110 117 116 112" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" />
         <!-- 开心嘴巴 -->
@@ -462,6 +493,7 @@
       <label class="row"><input type="checkbox" name="idleFade" /> 闲置时半透明</label>
 
       <label class="row"><input type="checkbox" name="autoPlay" /> 自动模拟工作状态</label>
+      <label class="row"><input type="checkbox" name="sound" /> 开启音效</label>
 
       <label>点击桌宠时说的话（每行一条）</label>
       <textarea name="tapLines"></textarea>

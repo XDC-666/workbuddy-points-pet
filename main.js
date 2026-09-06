@@ -2,6 +2,7 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, Notification, ipcMain, scre
 const path = require('path');
 const fs = require('fs');
 const { fetchBalance } = require('./src/store');
+const { startSpoolWatch } = require('./src/spool');
 
 const userData = app.getPath('userData');
 const CONFIG_PATH = path.join(userData, 'config.json');
@@ -33,6 +34,7 @@ function defaultConfig() {
     scale: 1.0,
     idleFade: true,
     autoPlay: true,
+    sound: true,
     quotes: ['积分要省着花~', '摸鱼一时爽', '该充能啦', '今天也要好好干活'],
     tapLines: [
       '干嘛戳我～',
@@ -173,6 +175,7 @@ function createTray() {
     Menu.buildFromTemplate([
       { label: '显示 / 隐藏', click: () => win && (win.isVisible() ? win.hide() : win.show()) },
       { label: '立即刷新', click: () => refreshNow() },
+      { label: '喂它吃东西', click: () => win && win.webContents.send('feed') },
       { label: '设置', click: () => win && win.webContents.send('show-settings') },
       { type: 'separator' },
       { label: '退出', click: () => app.quit() },
@@ -183,7 +186,12 @@ function createTray() {
 function openMenu() {
   if (!win) return;
   const menu = Menu.buildFromTemplate([
+    { label: '喂它吃东西', click: () => win.webContents.send('feed') },
     { label: '立即刷新', click: () => refreshNow() },
+    {
+      label: config.sound === false ? '开启音效' : '关闭音效',
+      click: () => saveConfig({ sound: config.sound === false }),
+    },
     { label: '设置', click: () => win.webContents.send('show-settings') },
     { label: '隐藏', click: () => win.hide() },
     { type: 'separator' },
@@ -198,6 +206,13 @@ function main() {
   createTray();
   restartPolling();
   refreshNow();
+  try {
+    startSpoolWatch((rec) => {
+      if (win && !win.isDestroyed()) win.webContents.send('agent-event', rec);
+    });
+  } catch (e) {
+    console.error('状态钩子监听启动失败（不影响桌宠使用）', e);
+  }
 }
 
 // ---- IPC ----
