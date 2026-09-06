@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WorkBuddy 积分桌宠 - 视觉预览</title>
+<style>
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 50% 30%, #1a2030, #0b0f18);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: #aab6cc;
+  }
+  .stage {
+    position: relative;
+    width: 320px; height: 360px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #pet {
+    position: relative;
+    width: 220px;
+    cursor: grab;
+    animation: hover 3.6s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  @keyframes hover {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    45% { transform: translateY(-10px) rotate(-1deg); }
+    55% { transform: translateY(-10px) rotate(1deg); }
+    75% { transform: translateY(0) rotate(0deg); }
+  }
+  #char {
+    position: relative;
+    width: 160px; height: 150px;
+    margin: 0 auto;
+    filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+  }
+  .eye-glow { animation: eyePulse 2.4s ease-in-out infinite; }
+  @keyframes eyePulse { 0%, 90%, 100% { opacity: .85; } 45% { opacity: 1; } }
+  .visor-sheen { animation: sheen 4.5s ease-in-out infinite; }
+  @keyframes sheen { 0%, 80%, 100% { transform: translateX(-40px); opacity: 0; } 35% { transform: translateX(40px); opacity: .55; } }
+
+  #bubble {
+    position: relative;
+    margin: -6px auto 0;
+    padding: 10px 14px;
+    width: fit-content; min-width: 150px; max-width: 220px;
+    border-radius: 16px;
+    color: #f0f4f8;
+    text-align: center;
+    background: rgba(18, 22, 34, .68);
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 12px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+  #bubble::before {
+    content: ''; position: absolute; inset: 0; border-radius: 16px; padding: 1px;
+    background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.03) 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+  }
+  #label { font-size: 11px; letter-spacing: .5px; color: rgba(200,214,235,.75); }
+  #balance {
+    font-size: 32px; font-weight: 800; line-height: 1.05; margin: 2px 0;
+    background: linear-gradient(180deg, #fff 0%, #b8d4ff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 18px rgba(79,166,255,.25);
+  }
+  #status { font-size: 11px; color: rgba(170,190,220,.65); min-height: 14px; }
+
+  .desc {
+    max-width: 480px; text-align: center; padding: 0 20px;
+    font-size: 13px; line-height: 1.8; opacity: .85;
+  }
+  .desc h2 { color: #fff; font-size: 16px; margin: 0 0 8px; }
+  .desc ul { text-align: left; display: inline-block; margin: 8px 0; padding-left: 18px; }
+  .desc li { margin: 4px 0; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div id="pet">
+      <div id="char">
+        <svg viewBox="0 0 220 200" preserveAspectRatio="xMidYMid meet" width="160" height="150">
+          <defs>
+            <radialGradient id="helmGrad" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="40%" stop-color="#f2f5fa" />
+              <stop offset="75%" stop-color="#d8dfe8" />
+              <stop offset="100%" stop-color="#b0bcc9" />
+            </radialGradient>
+            <linearGradient id="helmRim" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="50%" stop-color="#e3e8ef" />
+              <stop offset="100%" stop-color="#b8c3d1" />
+            </linearGradient>
+            <radialGradient id="visorGrad" cx="50%" cy="25%" r="80%">
+              <stop offset="0%" stop-color="#2b3a52" />
+              <stop offset="45%" stop-color="#111827" />
+              <stop offset="100%" stop-color="#05080f" />
+            </radialGradient>
+            <linearGradient id="eyeGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#8ff6ff" />
+              <stop offset="100%" stop-color="#2bd4ff" />
+            </linearGradient>
+            <filter id="eyeGlow" x="-80%" y="-80%" width="260%" height="260%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="5" />
+              <feOffset dx="0" dy="6" result="offsetblur" />
+              <feComponentTransfer><feFuncA type="linear" slope=".35" /></feComponentTransfer>
+              <feMerge><feMergeNode in="offsetblur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <clipPath id="visorClip"><ellipse cx="110" cy="88" rx="56" ry="44" /></clipPath>
+          </defs>
+          <path d="M70 118 Q70 162 110 168 Q150 162 150 118" fill="url(#helmGrad)" filter="url(#softShadow)" />
+          <path d="M80 122 Q80 152 110 158 Q140 152 140 122" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" />
+          <ellipse cx="46" cy="138" rx="18" ry="14" fill="#d8dfe8" filter="url(#softShadow)" />
+          <ellipse cx="174" cy="138" rx="18" ry="14" fill="#d8dfe8" filter="url(#softShadow)" />
+          <ellipse cx="42" cy="142" rx="10" ry="8" fill="#b0bcc9" />
+          <ellipse cx="178" cy="142" rx="10" ry="8" fill="#b0bcc9" />
+          <circle cx="110" cy="88" r="74" fill="url(#helmGrad)" filter="url(#softShadow)" />
+          <circle cx="110" cy="88" r="70" fill="none" stroke="url(#helmRim)" stroke-width="4" />
+          <ellipse cx="110" cy="88" rx="60" ry="48" fill="url(#visorGrad)" stroke="#0b111c" stroke-width="3" />
+          <g clip-path="url(#visorClip)">
+            <rect x="40" y="40" width="40" height="100" fill="url(#sheenGrad)" class="visor-sheen" />
+            <linearGradient id="sheenGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="rgba(255,255,255,0)" />
+              <stop offset="50%" stop-color="rgba(255,255,255,.55)" />
+              <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+            </linearGradient>
+          </g>
+          <g class="eye-glow" filter="url(#eyeGlow)">
+            <ellipse cx="88" cy="92" rx="14" ry="9" fill="url(#eyeGrad)" />
+            <ellipse cx="132" cy="92" rx="14" ry="9" fill="url(#eyeGrad)" />
+            <circle cx="92" cy="89" r="3" fill="#fff" opacity=".85" />
+            <circle cx="136" cy="89" r="3" fill="#fff" opacity=".85" />
+          </g>
+          <path d="M104 112 Q110 117 116 112" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          <circle cx="110" cy="32" r="5" fill="#2bd4ff" filter="url(#eyeGlow)" opacity=".9">
+            <animate attributeName="opacity" values=".6;1;.6" dur="2s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      </div>
+      <div id="bubble">
+        <div id="label">WorkBuddy 积分</div>
+        <div id="balance">1,280</div>
+        <div id="status">积分要省着花~</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="desc">
+    <h2>新版 WorkBuddy 积分桌宠预览</h2>
+    <ul>
+      <li>立体金属头盔 + 黑色反光面罩 + 青色发光眼</li>
+      <li>玻璃拟态积分气泡，渐变边框 + 柔和投影</li>
+      <li>悬浮呼吸、眼睛脉冲、面罩反光扫过</li>
+      <li>低余额时角色颤抖 + 流泪提示</li>
+    </ul>
+  </div>
+</body>
+</html>
