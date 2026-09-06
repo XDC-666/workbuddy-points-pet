@@ -1,0 +1,223 @@
+const { app, BrowserWindow, Tray, Menu, nativeImage, Notification, ipcMain, screen } = require('electron');
+const path = require('path');
+const fs = require('fs');
+const { fetchBalance } = require('./src/store');
+
+const userData = app.getPath('userData');
+const CONFIG_PATH = path.join(userData, 'config.json');
+
+let win = null;
+let tray = null;
+let config = null;
+let pollTimer = null;
+let idleTimer = null;
+let lowNotified = false;
+
+// 兜底图标（正常不会用到，因为 assets 下已有真实图标）
+const FALLBACK_ICON = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/8mhAAAAAElFTkSuQmCC';
+
+function defaultConfig() {
+  return {
+    source: 'file',
+    label: 'WorkBuddy 积分',
+    balance: 0,
+    file: { path: '', jsonPath: 'balance' },
+    http: {
+      url: 'https://api.deepseek.com/user/balance',
+      method: 'GET',
+      headers: { Authorization: 'Bearer YOUR_API_KEY' },
+      jsonPath: 'balance_infos[0].total_balance',
+    },
+    refreshIntervalSec: 30,
+    lowBalanceThreshold: 5,
+    scale: 1.0,
+    idleFade: true,
+    quotes: ['积分要省着花~', '摸鱼一时爽', '该充能啦', '今天也要好好干活'],
+  };
+}
+
+function loadConfig() {
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      return Object.assign(defaultConfig(), JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')));
+    }
+  } catch (e) {
+    console.error('读取配置失败，使用默认配置', e);
+  }
+  const def = defaultConfig();
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(def, null, 2));
+  } catch (e) {
+    console.error('写入默认配置失败', e);
+  }
+  return def;
+}
+
+function saveConfig(cfg) {
+  config = Object.assign({}, config, cfg);
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+  } catch (e) {
+    console.error('保存配置失败', e);
+  }
+  restartPolling();
+  applyScale(config.scale);
+  return config;
+}
+
+function applyScale(scale) {
+  if (!win) return;
+  const s = Number(scale) || 1;
+  win.setSize(Math.round(180 * s), Math.round(200 * s));
+}
+
+function pickQuote() {
+  const q = (config.quotes && config.quotes.length) ? config.quotes : [''];
+  return q[Math.floor(Math.random() * q.length)];
+}
+
+async function refreshNow() {
+  try {
+    const r = await fetchBalance(config);
+    const balance = r.balance;
+    const data = {
+      balance,
+      label: config.label,
+      source: r.source,
+      quote: pickQuote(),
+      low: balance <= config.lowBalanceThreshold,
+      time: Date.now(),
+    };
+    if (win && !win.isDestroyed()) win.webContents.send('update', data);
+    if (data.low && !lowNotified) {
+      new Notification({ title: '积分告急', body: `${config.label} 仅剩 ${balance}` }).show();
+      lowNotified = true;
+    }
+    if (!data.low) lowNotified = false;
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    if (win && !win.isDestroyed()) win.webContents.send('update', { error: msg, label: config.label });
+  }
+}
+
+function restartPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  const sec = Math.max(5, Number(config.refreshIntervalSec) || 30);
+  pollTimer = setInterval(refreshNow, sec * 1000);
+}
+
+function resetIdle() {
+  if (!win) return;
+  win.setOpacity(1);
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    if (win && !win.isDestroyed() && config.idleFade) win.setOpacity(0.4);
+  }, 4000);
+}
+
+function createWindow() {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const s = Number(config.scale) || 1;
+  win = new BrowserWindow({
+    width: Math.round(180 * s),
+    height: Math.round(200 * s),
+    x: width - Math.round(200 * s),
+    y: height - Math.round(220 * s),
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    hasShadow: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  win.loadFile(path.join(__dirname, 'index.html'));
+  win.on('closed', () => {
+    win = null;
+  });
+  win.webContents.on('context-menu', () => openMenu());
+  if (config.idleFade) {
+    win.on('focus', resetIdle);
+    resetIdle();
+  }
+}
+
+function createTray() {
+  let img;
+  const iconPath = path.join(__dirname, 'assets', 'tray.png');
+  if (fs.existsSync(iconPath)) img = nativeImage.createFromPath(iconPath);
+  else img = nativeImage.createFromBuffer(Buffer.from(FALLBACK_ICON, 'base64'));
+  tray = new Tray(img.resize({ width: 16, height: 16 }));
+  tray.setToolTip('WorkBuddy 积分桌宠');
+  tray.on('click', () => {
+    if (win) win.isVisible() ? win.hide() : win.show();
+  });
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: '显示 / 隐藏', click: () => win && (win.isVisible() ? win.hide() : win.show()) },
+      { label: '立即刷新', click: () => refreshNow() },
+      { label: '设置', click: () => win && win.webContents.send('show-settings') },
+      { type: 'separator' },
+      { label: '退出', click: () => app.quit() },
+    ])
+  );
+}
+
+function openMenu() {
+  if (!win) return;
+  const menu = Menu.buildFromTemplate([
+    { label: '立即刷新', click: () => refreshNow() },
+    { label: '设置', click: () => win.webContents.send('show-settings') },
+    { label: '隐藏', click: () => win.hide() },
+    { type: 'separator' },
+    { label: '退出', click: () => app.quit() },
+  ]);
+  menu.popup({ window: win });
+}
+
+function main() {
+  config = loadConfig();
+  createWindow();
+  createTray();
+  restartPolling();
+  refreshNow();
+}
+
+// ---- IPC ----
+ipcMain.handle('get-config', () => config);
+ipcMain.handle('save-config', (_e, cfg) => saveConfig(cfg));
+ipcMain.handle('refresh-now', () => refreshNow());
+ipcMain.on('drag', (_e, dx, dy) => {
+  if (!win) return;
+  const [x, y] = win.getPosition();
+  win.setPosition(x + dx, y + dy);
+});
+ipcMain.on('zoom', (_e, factor) => {
+  const s = Math.min(2, Math.max(0.6, (config.scale || 1) * factor));
+  saveConfig({ scale: s });
+});
+ipcMain.on('snap', (_e, side) => {
+  if (!win) return;
+  const b = win.getBounds();
+  const area = screen.getPrimaryDisplay().workAreaSize;
+  if (side === 'left') win.setPosition(0, win.getBounds().y);
+  else if (side === 'right') win.setPosition(area.width - b.width, win.getBounds().y);
+});
+ipcMain.on('open-menu', () => openMenu());
+ipcMain.on('show-settings', () => {
+  if (win) win.webContents.send('show-settings');
+});
+
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (win) win.show();
+  });
+  app.whenReady().then(main);
+}

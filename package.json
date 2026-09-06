@@ -1,0 +1,41 @@
+{
+  "name": "workbuddy-points-pet",
+  "version": "1.0.0",
+  "description": "WorkBuddy 积分桌宠 —— 桌面悬浮宠物，实时显示你的 AI 助手剩余积分。数据源可配置：本地文件 / 任意 HTTP 余额接口。",
+  "main": "main.js",
+  "author": "雄狮泉河",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XDC-666/workbuddy-points-pet.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "icons": "python scripts/gen-icon.py",
+    "dist": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.workbuddy.pointspet",
+    "productName": "WorkBuddy 积分桌宠",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["portable", "nsis"],
+      "icon": "assets/icon.png"
+    }
+  }
+}

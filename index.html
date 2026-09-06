@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WorkBuddy 积分桌宠</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: transparent; overflow: hidden;
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    user-select: none; -webkit-user-select: none;
+  }
+  #pet {
+    position: relative; width: 180px; margin: 0 auto;
+    cursor: grab; text-align: center;
+    animation: float 3.2s ease-in-out infinite;
+  }
+  #pet:active { cursor: grabbing; }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  #char { transition: filter .4s; }
+  #char svg { display: block; margin: 0 auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,.25)); }
+  body.low #char { filter: grayscale(.5) brightness(.92); }
+  #tear { opacity: 0; transition: opacity .3s; }
+  body.low #tear { opacity: 1; }
+
+  #bubble {
+    margin-top: 4px; padding: 8px 12px; border-radius: 14px;
+    background: rgba(255,255,255,.92); color: #1f2937;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25); min-width: 150px;
+  }
+  #label { font-size: 12px; color: #6b7280; }
+  #balance {
+    font-size: 30px; font-weight: 700; color: #185FA5; line-height: 1.1;
+  }
+  #balance.pop { animation: pop .5s ease; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  #status { font-size: 11px; color: #9ca3af; min-height: 14px; }
+  #status.err { color: #d4584a; }
+
+  /* 设置面板 */
+  #settings {
+    position: fixed; inset: 0; background: rgba(15,23,42,.78);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  #settings.hidden { display: none; }
+  #form {
+    width: 280px; max-height: 90%; overflow: auto;
+    background: #fff; color: #1f2937; border-radius: 14px; padding: 16px;
+    font-size: 13px;
+  }
+  #form h3 { margin: 0 0 10px; font-size: 15px; }
+  #form label { display: block; margin: 8px 0 3px; color: #4b5563; }
+  #form input[type=text], #form input[type=number], #form select, #form textarea {
+    width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; font-family: inherit;
+  }
+  #form textarea { height: 60px; resize: vertical; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; }
+  .btn {
+    flex: 1; padding: 8px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-family: inherit;
+  }
+  .btn.primary { background: #185FA5; color: #fff; }
+  .btn.ghost { background: #eef2f7; color: #374151; }
+  .hint { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div id="pet">
+    <div id="char">
+      <svg viewBox="0 0 200 200" width="120" height="120">
+        <circle cx="100" cy="105" r="60" fill="#378ADD" />
+        <polygon points="48,62 34,18 90,56" fill="#F5F5FA" />
+        <polygon points="152,62 166,18 110,56" fill="#F5F5FA" />
+        <circle cx="100" cy="106" r="46" fill="#F5F5FA" />
+        <circle cx="84" cy="100" r="7" fill="#378ADD" />
+        <circle cx="116" cy="100" r="7" fill="#378ADD" />
+        <circle cx="100" cy="120" r="4.5" fill="#F2809F" />
+        <path d="M90 132 Q100 140 110 132" stroke="#378ADD" stroke-width="3" fill="none" stroke-linecap="round" />
+        <circle id="tear" cx="82" cy="120" r="5" fill="#7FBDFF" />
+      </svg>
+    </div>
+    <div id="bubble">
+      <div id="label">WorkBuddy 积分</div>
+      <div id="balance">--</div>
+      <div id="status">加载中…</div>
+    </div>
+  </div>
+
+  <div id="settings" class="hidden">
+    <form id="form">
+      <h3>桌宠设置</h3>
+
+      <label>数据源</label>
+      <select name="source">
+        <option value="file">本地文件 / 手动录入</option>
+        <option value="http">HTTP 余额接口</option>
+      </select>
+
+      <div id="fileCfg">
+        <label>显示名称</label>
+        <input type="text" name="label" />
+        <label>当前积分（手动模式）</label>
+        <input type="number" name="balance" step="any" />
+        <p class="hint">HTTP 模式下此项由接口返回，无需填写。</p>
+      </div>
+
+      <div id="httpCfg" style="display:none">
+        <label>余额接口 URL</label>
+        <input type="text" name="url" placeholder="https://api.deepseek.com/user/balance" />
+        <label>Authorization 头</label>
+        <input type="text" name="auth" placeholder="Bearer YOUR_API_KEY" />
+        <label>余额字段路径 (jsonPath)</label>
+        <input type="text" name="jsonPath" placeholder="balance_infos[0].total_balance" />
+        <p class="hint">支持点路径与数组索引，如 a.b[0].c</p>
+      </div>
+
+      <label>刷新间隔（秒）</label>
+      <input type="number" name="interval" min="5" value="30" />
+
+      <label>低余额提醒阈值</label>
+      <input type="number" name="threshold" step="any" value="5" />
+
+      <label class="row"><input type="checkbox" name="idleFade" /> 闲置时半透明</label>
+
+      <label>随机语录（每行一条）</label>
+      <textarea name="quotes"></textarea>
+
+      <div class="actions">
+        <button type="button" class="btn ghost" id="cancel">取消</button>
+        <button type="submit" class="btn primary">保存</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

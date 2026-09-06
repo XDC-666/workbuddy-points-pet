@@ -1,0 +1,27 @@
+{
+  "source": "file",
+  "label": "WorkBuddy 积分",
+  "balance": 0,
+  "file": {
+    "path": "",
+    "jsonPath": "balance"
+  },
+  "http": {
+    "url": "https://api.deepseek.com/user/balance",
+    "method": "GET",
+    "headers": {
+      "Authorization": "Bearer YOUR_API_KEY"
+    },
+    "jsonPath": "balance_infos[0].total_balance"
+  },
+  "refreshIntervalSec": 30,
+  "lowBalanceThreshold": 5,
+  "scale": 1.0,
+  "idleFade": true,
+  "quotes": [
+    "积分要省着花~",
+    "摸鱼一时爽",
+    "该充能啦",
+    "今天也要好好干活"
+  ]
+}
