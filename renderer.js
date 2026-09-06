@@ -379,10 +379,15 @@ function applyData(d) {
       if (d.hint) showChat(d.hint, 4200);
       return;
     }
-    statusEl.textContent = '查询失败: ' + d.error;
+    // 首次或从未成功：显示明确可操作的提示
+    let short = '查询失败: ' + d.error;
+    if (/40[13]/.test(d.error)) {
+      short = 'Cookie 已失效，请重新登录 workbuddy.cn 后复制 Cookie';
+    }
+    statusEl.textContent = short;
     statusEl.classList.add('err');
     setState('error', 3000);
-    showChat(STATE_LINES.error[0], 3000);
+    showChat(d.hint || STATE_LINES.error[0], 4200);
     playSfx('error');
     return;
   }

@@ -181,9 +181,9 @@ function createWindow() {
   const s = Number(config.scale) || 1;
   win = new BrowserWindow({
     width: Math.round(280 * s),
-    height: Math.round(360 * s),
+    height: Math.round(400 * s),
     x: width - Math.round(300 * s),
-    y: height - Math.round(380 * s),
+    y: height - Math.round(420 * s),
     transparent: true,
     frame: false,
     alwaysOnTop: true,
