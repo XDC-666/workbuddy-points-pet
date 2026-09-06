@@ -36,12 +36,22 @@
 
 > 想先看效果？打开仓库里的 `preview.html`（纯静态，双击即可在浏览器里试玩全部互动）。
 
-## 快速开始（给别人用）
+## 快速开始
 
-去 Releases 下载 `WorkBuddy 积分桌宠 Setup *.exe`（安装版）或 `*.exe`（绿色便携版），双击运行。
+### 方式一：双击 exe 运行（推荐）
+
+```bash
+npm run dist
+```
+
+打包完成后 `dist/` 下会出现两个文件：
+
+- `WorkBuddy 积分桌宠 1.0.0.exe` —— **绿色便携版，双击即用**（推荐你自己日常用）
+- `WorkBuddy 积分桌宠 Setup 1.0.0.exe` —— 安装版（推荐给别人分发）
+
 首次运行会在用户目录生成 `config.json`，右键桌宠 → 设置 → 填入你的积分即可。
 
-## 从源码运行
+### 方式二：从源码运行
 
 ```bash
 git clone https://github.com/XDC-666/workbuddy-points-pet.git
@@ -184,6 +194,28 @@ WorkBuddy ──hooks──▶ status-hook.mjs
 **③ 任意 HTTP 接口**
 
 只要你的服务返回一个 JSON，并用 `jsonPath` 指到余额字段即可，例如返回 `{"balance": 123}` 就填 `jsonPath: "balance"`。
+
+## 开机自启（Windows）
+
+每次开机都想让它自动出现，不用手动双击？
+
+### 一键设置
+
+```bash
+npm run add-startup
+```
+
+运行后会在 Windows 启动目录里创建一个快捷方式，**重启电脑后桌宠会自动运行**。
+
+### 手动设置
+
+1. 按 `Win + R`，输入 `shell:startup`，回车
+2. 把 `dist/WorkBuddy 积分桌宠 1.0.0.exe` 的快捷方式拖进去
+3. 重启验证
+
+### 取消开机自启
+
+按 `Win + R` 输入 `shell:startup`，删除 `WorkBuddyPointsPet.lnk` 即可。
 
 ## 打包成 exe（给别人分发）
 

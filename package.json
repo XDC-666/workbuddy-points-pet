@@ -14,6 +14,7 @@
     "icons": "python scripts/gen-icon.py",
     "install-hook": "node scripts/install-hook.mjs",
     "uninstall-hook": "node scripts/install-hook.mjs --uninstall",
+    "add-startup": "node scripts/add-to-startup.js",
     "dist": "electron-builder --win --x64"
   },
   "devDependencies": {
@@ -38,7 +39,13 @@
     ],
     "win": {
       "target": ["portable", "nsis"],
-      "icon": "assets/icon.png"
-    }
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "forceCodeSigning": false
   }
 }
