@@ -89,6 +89,7 @@
   body.st-success #eyesHappy { display: block; }
   body.st-error #eyesError { display: block; }
   body.st-tap #eyesTap { display: block; }
+  body.st-sleep #eyesSleep { display: block; }
   #eyesNormal { transform-origin: 110px 92px; }
 
   .eye-glow { animation: eyePulse 2.4s ease-in-out infinite; }
@@ -124,6 +125,26 @@
     35% { transform: translateX(6px); }
     55% { transform: translateX(-4px); }
     80% { transform: translateX(4px); }
+  }
+  body.st-sleep #char {
+    animation: sleepBreath 4.2s ease-in-out infinite;
+    filter: drop-shadow(0 18px 28px rgba(0,0,0,.45)) saturate(.7) brightness(.82);
+  }
+  @keyframes sleepBreath {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(3px) scale(.985); }
+  }
+  #zzz {
+    position: absolute; top: -2px; right: 4px;
+    font-size: 13px; font-weight: 800; color: #9fc6ff;
+    text-shadow: 0 2px 8px rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none; z-index: 18;
+  }
+  body.st-sleep #zzz { animation: zzzFloat 3.4s ease-in-out infinite; }
+  @keyframes zzzFloat {
+    0% { transform: translateY(4px) scale(.8); opacity: 0; }
+    20% { opacity: .95; }
+    100% { transform: translateY(-26px) scale(1.15); opacity: 0; }
   }
   body.st-low #pet { animation: hover 3.6s ease-in-out infinite, shiver 2.2s ease-in-out infinite; }
   @keyframes shiver {
@@ -280,6 +301,10 @@
             <circle cx="91" cy="88" r="3.5" fill="#fff" opacity=".9" />
             <circle cx="135" cy="88" r="3.5" fill="#fff" opacity=".9" />
           </g>
+          <g id="eyesSleep" class="eyes">
+            <path d="M76 93 Q88 101 100 93" stroke="#7fd4ff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".9" />
+            <path d="M120 93 Q132 101 144 93" stroke="#7fd4ff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".9" />
+          </g>
           <path id="mouth" d="M104 112 Q110 117 116 112" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" />
           <path id="mouthHappy" d="M100 110 Q110 121 120 110" stroke="#5a6d87" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0" />
           <circle id="topLight" cx="110" cy="32" r="5" filter="url(#eyeGlow)" opacity=".9">
@@ -287,6 +312,7 @@
           </circle>
           <circle id="tear" cx="76" cy="104" r="5" fill="#7FBDFF" opacity=".85" />
         </svg>
+        <div id="zzz">Zzz</div>
       </div>
       <div id="bubble">
         <div id="label">WorkBuddy 积分</div>
@@ -306,6 +332,7 @@
       <button data-state="success">完成</button>
       <button data-state="error">出错</button>
       <button data-state="low">低余额</button>
+      <button data-state="sleep">睡眠</button>
       <button data-state="tap">戳一下</button>
       <button id="autoBtn">自动演示：开</button>
     </div>
@@ -334,8 +361,9 @@
     error: ['出问题了...','这次没成功'],
     low: ['积分告急，该充能啦','余额不多了'],
     tap: TAP_LINES,
+    sleep: ['好困…我先睡一会儿 Zzz', 'Zzz…别吵我', '睡着啦，梦里也在搬砖'],
   };
-  const EYE_IDS = ['Normal','Think','Work','Happy','Error','Tap'];
+  const EYE_IDS = ['Normal','Think','Work','Happy','Error','Tap','Sleep'];
 
   let state = 'idle';
   let stateTimer = null;
@@ -374,10 +402,10 @@
     b.addEventListener('click',()=>{
       const s = b.dataset.state;
       clearCycle();
-      if(s==='low' || s==='idle') setState(s);
+      if(s==='low' || s==='idle' || s==='sleep') setState(s);
       else setState(s, 3200);
       showChat(pick(LINES[s]), 3400);
-      statusEl.textContent = s==='low' ? '积分告急' : (s==='error' ? '查询失败' : '陪你一起搬砖');
+      statusEl.textContent = s==='low' ? '积分告急' : (s==='error' ? '查询失败' : (s==='sleep' ? '睡着了… Zzz' : '陪你一起搬砖'));
     });
   });
 
@@ -404,6 +432,7 @@
 
   let clickTimer = null;
   pet.addEventListener('click',()=>{
+    if(state==='sleep'){ setState('idle'); showChat('嗯…我醒了',2600); return; }
     if(clickTimer){ clearTimeout(clickTimer); clickTimer=null; showChat('（双击：打开设置）',2600); return; }
     clickTimer = setTimeout(()=>{
       clickTimer=null;
@@ -440,6 +469,7 @@
     return null;
   }
   function blink(){
+    if(state==='sleep') return;
     const el = visibleEyes();
     if(!el) return;
     el.style.transform = 'translate('+gazeX+'px,'+gazeY+'px) scaleY(.12)';

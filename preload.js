@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('api', {
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (cfg) => ipcRenderer.invoke('save-config', cfg),
   refresh: () => ipcRenderer.invoke('refresh-now'),
+  notify: (payload) => ipcRenderer.invoke('notify', payload),
   move: (dx, dy) => ipcRenderer.send('drag', dx, dy),
   zoom: (factor) => ipcRenderer.send('zoom', factor),
   snap: (side) => ipcRenderer.send('snap', side),

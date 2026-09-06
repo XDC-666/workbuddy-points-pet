@@ -37,6 +37,8 @@ function defaultConfig() {
     idleFade: true,
     autoPlay: true,
     sound: true,
+    notifyOnDone: true, // 任务完成时弹出桌面通知
+    sleepAfterSec: 300, // 闲置多久进入睡眠（秒），0 = 永不睡眠
     initialBalance: 1000,
     costPerEvent: 1,
     autoDeduct: true,
@@ -265,6 +267,18 @@ function main() {
 ipcMain.handle('get-config', () => config);
 ipcMain.handle('save-config', (_e, cfg) => saveConfig(cfg));
 ipcMain.handle('refresh-now', () => refreshNow());
+// 渲染进程请求弹出桌面通知（任务完成提醒等）
+ipcMain.handle('notify', (_e, payload) => {
+  try {
+    if (!Notification.isSupported()) return false;
+    const { title, body } = payload || {};
+    new Notification({ title: title || 'WorkBuddy 积分桌宠', body: body || '' }).show();
+    return true;
+  } catch (e) {
+    console.error('弹出通知失败', e);
+    return false;
+  }
+});
 ipcMain.on('drag', (_e, dx, dy) => {
   if (!win) return;
   const [x, y] = win.getPosition();

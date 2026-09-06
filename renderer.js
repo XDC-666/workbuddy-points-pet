@@ -144,7 +144,7 @@ function showChat(text, ms) {
 // ---- 眼睛：跟随鼠标 + 随机眨眼 ----
 let gazeX = 0;
 let gazeY = 0;
-const EYE_IDS = ['Normal', 'Think', 'Work', 'Happy', 'Error', 'Tap', 'Eat'];
+const EYE_IDS = ['Normal', 'Think', 'Work', 'Happy', 'Error', 'Tap', 'Eat', 'Sleep'];
 
 function applyEyeTransform() {
   EYE_IDS.forEach((n) => {
@@ -173,9 +173,11 @@ window.addEventListener('mousemove', (e) => {
   gazeX = dx * 4;
   gazeY = dy * 3;
   applyEyeTransform();
+  markActivity(); // 鼠标在桌宠上活动 = 用户还在，重置睡眠倒计时
 });
 
 function blink() {
+  if (state === 'sleep') return; // 睡着了不眨眼
   const el = visibleEyes();
   if (!el) return;
   el.style.transform = 'translate(' + gazeX + 'px,' + gazeY + 'px) scaleY(.12)';
@@ -239,8 +241,74 @@ const AGENT_MAP = {
   PreCompact: { st: 'working', lines: ['整理上下文中...'] },
 };
 
+// ---- 任务进行中：持续保持「工作中」，直到收到 Stop ----
+let taskActive = false;
+let workKeepTimer = null;
+const WORK_KEEPALIVE_MS = 45000; // 45 秒没有后续事件，认为任务异常中断，自动收工
+
+// ---- 睡眠：长时间没动静自动入睡，任何动静都会醒 ----
+let sleepTimer = null;
+
+function markActivity() {
+  const sec = Number(cfg.sleepAfterSec);
+  if (!Number.isFinite(sec) || sec <= 0) {
+    if (sleepTimer) { clearTimeout(sleepTimer); sleepTimer = null; }
+    return;
+  }
+  if (sleepTimer) clearTimeout(sleepTimer);
+  sleepTimer = setTimeout(goSleep, sec * 1000);
+  if (state === 'sleep') wake();
+}
+
+function goSleep() {
+  if (state === 'sleep') return;
+  if (taskActive || state === 'working' || state === 'thinking') return; // 正在干活不睡
+  setState('sleep');
+  showChat('好困…我先睡一会儿 Zzz', 3200);
+}
+
+function wake() {
+  if (state !== 'sleep') return;
+  setState(isLow ? 'low' : 'idle');
+  showChat(pick(['嗯…我醒了', '睡饱啦，继续陪你', '你回来啦']), 2600);
+  markActivity();
+}
+
+function enterWorking(line) {
+  taskActive = true;
+  if (workKeepTimer) clearTimeout(workKeepTimer);
+  workKeepTimer = setTimeout(() => {
+    taskActive = false; // 兜底：长时间没有新事件就收工，避免一直卡在「工作中」
+    if (state === 'working') goIdle();
+  }, WORK_KEEPALIVE_MS);
+
+  if (state === 'working') {
+    if (Math.random() < 0.45) showChat(line || pick(STATE_LINES.working), 2600);
+    return;
+  }
+  setState('working');
+  showChat(line || pick(STATE_LINES.working), 3000);
+  playSfx('work');
+}
+
+function finishTask() {
+  if (!taskActive && state !== 'working') return;
+  taskActive = false;
+  if (workKeepTimer) { clearTimeout(workKeepTimer); workKeepTimer = null; }
+  setState('success', 3200);
+  const done = pick(STATE_LINES.success);
+  showChat(done, 3200);
+  playSfx('success');
+  if (cfg.notifyOnDone !== false && window.api.notify) {
+    window.api.notify({ title: '任务完成', body: done });
+  }
+  markActivity();
+}
+
 function handleAgentEvent(rec) {
   if (!rec || !rec.event) return;
+  markActivity(); // 有事件说明用户在活动，重置睡眠倒计时
+
   if (!realMode) {
     realMode = true; // 收到真实事件后停止模拟循环
     clearCycle();
@@ -250,23 +318,37 @@ function handleAgentEvent(rec) {
   }
 
   if (rec.event === 'Stop') {
-    if (rec.stop) {
-      setState('thinking', 3000);
-      showChat('还在继续...', 2400);
-    } else {
-      setState('success', 2800);
-      showChat(pick(STATE_LINES.success), 3000);
-      playSfx('success');
-    }
+    if (rec.stop) enterWorking('还在继续…'); // 只是中途停顿，任务还没结束
+    else finishTask();
+    return;
+  }
+
+  if (rec.event === 'UserPromptSubmit') {
+    taskActive = true;
+    setState('thinking');
+    showChat(pick(AGENT_MAP.UserPromptSubmit.lines), 2800);
+    playSfx('think');
+    // 思考片刻后自动转入「工作中」，避免长任务空档时闪回待机
+    if (workKeepTimer) clearTimeout(workKeepTimer);
+    workKeepTimer = setTimeout(() => {
+      if (state === 'thinking') enterWorking();
+    }, 2600);
     return;
   }
 
   const m = AGENT_MAP[rec.event];
   if (!m) return;
+
+  if (m.st === 'working') {
+    enterWorking(pick(m.lines));
+    return;
+  }
+
+  // 其余事件（SessionStart / SessionEnd / Notification）
+  taskActive = false;
   setState(m.st, m.st === 'idle' ? 0 : 4200);
   showChat(pick(m.lines), 3000);
   if (m.st === 'thinking') playSfx('think');
-  else if (m.st === 'working') playSfx('work');
 }
 
 if (window.api.onAgentEvent) window.api.onAgentEvent(handleAgentEvent);
@@ -289,6 +371,7 @@ function spawnHearts() {
 }
 
 function feed() {
+  markActivity();
   setState('eat', 2700);
   showChat(pick(STATE_LINES.eat), 2900);
   spawnHearts();
@@ -345,6 +428,8 @@ window.addEventListener('mouseup', () => {
 });
 
 function doTap() {
+  if (state === 'sleep') { wake(); playSfx('tap'); return; } // 睡着时第一次点击只负责叫醒
+  markActivity();
   pet.classList.remove('tap');
   void pet.offsetWidth;
   pet.classList.add('tap');
@@ -429,6 +514,8 @@ function fillForm(c) {
   form.idleFade.checked = !!c.idleFade;
   form.autoPlay.checked = c.autoPlay !== false;
   form.sound.checked = c.sound !== false;
+  form.notifyOnDone.checked = c.notifyOnDone !== false;
+  form.sleepAfterSec.value = c.sleepAfterSec != null ? c.sleepAfterSec : 300;
   form.tapLines.value = (c.tapLines && c.tapLines.length)
     ? c.tapLines.join('\n')
     : DEFAULT_TAP_LINES.join('\n');
@@ -471,6 +558,8 @@ form.addEventListener('submit', (e) => {
       idleFade: form.idleFade.checked,
       autoPlay: form.autoPlay.checked,
       sound: form.sound.checked,
+      notifyOnDone: form.notifyOnDone.checked,
+      sleepAfterSec: Number(form.sleepAfterSec.value) || 0,
       tapLines: form.tapLines.value.split('\n').map((s) => s.trim()).filter(Boolean),
       quotes: form.quotes.value.split('\n').map((s) => s.trim()).filter(Boolean),
       initialBalance: Number(form.initialBalance.value) || 0,
@@ -481,6 +570,7 @@ form.addEventListener('submit', (e) => {
       cfg = saved;
       if (saved.sound !== false) playSfx('tap');
       scheduleAuto();
+      markActivity(); // 睡眠时间可能刚改过，重新计时
       closeSettings();
       window.api.refresh();
     });
@@ -503,6 +593,7 @@ window.api.getConfig().then((c) => {
   setState('idle');
   scheduleBlink();
   scheduleAuto();
+  markActivity(); // 启动即开始闲置计时
   const fed = c.feedCount || 0;
   setTimeout(() => {
     showChat(fed > 0 ? ('你喂过我 ' + fed + ' 次啦') : timeGreeting(), 3800);
