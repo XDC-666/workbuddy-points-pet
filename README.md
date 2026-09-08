@@ -8,6 +8,8 @@
 
 🔒 隐私：纯本地运行，无上传、无遥测、无远程端口。详见 [PRIVACY.md](./PRIVACY.md)。
 
+**🌐 简体中文 | [English](./README_EN.md)**
+
 ## 功能
 
 **互动（参考 DeepSeek 桌宠）**
