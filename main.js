@@ -58,10 +58,19 @@ function defaultConfig() {
   };
 }
 
+// 配置中 file/http 是嵌套对象。浅合并会在仅更新其中一个字段时丢掉
+// Cookie、请求方法或本地文件路径等其它配置，因此在读取和保存时都合并一层。
+function mergeConfig(base, patch) {
+  const next = Object.assign({}, base, patch || {});
+  next.file = Object.assign({}, base.file, patch && patch.file);
+  next.http = Object.assign({}, base.http, patch && patch.http);
+  return next;
+}
+
 function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_PATH)) {
-      return Object.assign(defaultConfig(), JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')));
+      return mergeConfig(defaultConfig(), JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')));
     }
   } catch (e) {
     console.error('读取配置失败，使用默认配置', e);
@@ -76,7 +85,7 @@ function loadConfig() {
 }
 
 function saveConfig(cfg) {
-  config = Object.assign({}, config, cfg);
+  config = mergeConfig(config || defaultConfig(), cfg);
   try {
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
   } catch (e) {

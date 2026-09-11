@@ -99,7 +99,7 @@ async function main() {
     const event = process.argv[2];
     if (!event) return; // 没有事件名就什么都不做
 
-    const raw = await readStdin(300);
+    const raw = await readStdin(50);
     let payload = {};
     if (raw) {
       try {

@@ -4,6 +4,19 @@ const path = require('path');
 
 const SPOOL_BALANCE = path.join(os.homedir(), '.workbuddy-points-pet', 'balance.json');
 
+// 余额为 0 是合法值，但缺失字段、空字符串和非数字不应被伪装成 0。
+// 否则接口配置出错时会显示“积分耗尽”，并错误触发低余额通知。
+function parseBalance(value, source) {
+  if (value === '' || value === null || value === undefined) {
+    throw new Error(`${source} 未返回余额字段`);
+  }
+  const balance = Number(value);
+  if (!Number.isFinite(balance)) {
+    throw new Error(`${source} 返回的余额不是有效数字`);
+  }
+  return balance;
+}
+
 // 按 "a.b[0].c" / "a.b[*].c" 形式从对象里取值
 // 支持 [*] 对数组内某个字段求和（用于多资源包积分汇总）
 function getByPath(obj, expr) {
@@ -47,7 +60,7 @@ async function readFileBalance(cfg) {
     try {
       const json = JSON.parse(fs.readFileSync(SPOOL_BALANCE, 'utf8'));
       const bal = Number(json.balance);
-      if (!Number.isNaN(bal)) {
+      if (Number.isFinite(bal)) {
         return { balance: bal, source: 'hook', raw: json, hookUpdatedAt: json.updatedAt };
       }
     } catch {
@@ -62,7 +75,7 @@ async function readFileBalance(cfg) {
   const text = await fs.promises.readFile(fp, 'utf8');
   const json = JSON.parse(text);
   const bal = getByPath(json, (cfg.file && cfg.file.jsonPath) || 'balance');
-  return { balance: Number(bal) || 0, source: 'file', raw: json };
+  return { balance: parseBalance(bal, '本地文件'), source: 'file', raw: json };
 }
 
 // HTTP 数据源：拉取余额接口，按 jsonPath 解析
@@ -97,7 +110,7 @@ async function readHttpBalance(cfg) {
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
   const json = await resp.json();
   const bal = getByPath(json, h.jsonPath);
-  return { balance: Number(bal) || 0, source: 'http', raw: json };
+  return { balance: parseBalance(bal, 'HTTP 接口'), source: 'http', raw: json };
 }
 
 async function fetchBalance(cfg) {
@@ -105,4 +118,4 @@ async function fetchBalance(cfg) {
   return readFileBalance(cfg);
 }
 
-module.exports = { fetchBalance, getByPath };
+module.exports = { fetchBalance, getByPath, parseBalance };
